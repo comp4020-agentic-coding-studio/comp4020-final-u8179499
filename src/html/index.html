@@ -144,6 +144,16 @@
         left: 0;
         width: 0;
         pointer-events: none;
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity 0.8s ease, visibility 0.8s;
+      }
+
+      /* the visible trace: bottles float only while the shared ocean really
+         holds an uncaught one (GET /api/ocean); an empty ocean shows none */
+      .scene.has-bottles .drift-outer {
+        visibility: visible;
+        opacity: 1;
       }
 
       .drift-inner {
@@ -778,6 +788,7 @@
         .drift-outer,
         .drift-inner {
           animation: none;
+          transition: none;
         }
         .db-1 {
           transform: translateX(22vw);
@@ -1012,6 +1023,7 @@
       const ripple = document.getElementById("ripple");
       const dockAnchor = document.getElementById("dock-anchor");
       const horizonAnchor = document.getElementById("horizon-anchor");
+      const scene = document.querySelector(".scene");
 
       const MAX = 280;
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1190,6 +1202,16 @@
         );
       }
 
+      // existence only; on failure the ocean simply stays as it was
+      async function syncOcean() {
+        try {
+          const res = await fetch("/api/ocean", { cache: "no-store" });
+          if (!res.ok) return;
+          const { empty } = await res.json();
+          scene.classList.toggle("has-bottles", empty === false);
+        } catch {}
+      }
+
       function pause(ms) {
         return new Promise((resolve) => setTimeout(resolve, ms));
       }
@@ -1222,6 +1244,7 @@
           if (res.status === 201) {
             messageEl.value = "";
             countEl.textContent = `${MAX} characters left`;
+            syncOcean();
           } else {
             statusEl.textContent = "That message couldn't be thrown. Try again.";
           }
@@ -1249,6 +1272,7 @@
             emptyEl.textContent = body.message;
             emptyEl.classList.add("visible");
           }
+          syncOcean();
         } catch {
           statusEl.textContent = "Could not reach the ocean. Try again.";
         } finally {
@@ -1266,6 +1290,7 @@
 
       throwBtn.addEventListener("click", handleThrow);
       catchBtn.addEventListener("click", handleCatch);
+      syncOcean();
     </script>
   </body>
 </html>

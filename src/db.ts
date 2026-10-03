@@ -24,6 +24,14 @@ export function openDatabase(path: string): DatabaseSync {
   return db;
 }
 
+// Existence only: whether any uncaught bottle is out there, never how many.
+export function oceanIsEmpty(db: DatabaseSync): boolean {
+  const row = db
+    .prepare("SELECT EXISTS(SELECT 1 FROM bottles WHERE caught_at IS NULL) AS present")
+    .get() as { present: number };
+  return row.present === 0;
+}
+
 export function throwBottle(db: DatabaseSync, message: string): void {
   db.prepare("INSERT INTO bottles (message) VALUES (?)").run(message);
 }

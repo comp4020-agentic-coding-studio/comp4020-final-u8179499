@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { openDatabase, throwBottle, catchBottle } from "./db.ts";
+import { openDatabase, throwBottle, catchBottle, oceanIsEmpty } from "./db.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
@@ -59,6 +59,11 @@ const server = createServer(async (req, res) => {
 
   if (req.method === "GET" && pathname === "/readme/") {
     send(res, 200, "text/html", readmeHtml);
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/api/ocean") {
+    sendJson(res, 200, { empty: oceanIsEmpty(db) });
     return;
   }
 

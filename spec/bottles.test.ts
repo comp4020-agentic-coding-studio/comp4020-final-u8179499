@@ -121,6 +121,26 @@ it("an empty ocean returns the defined empty state without crashing", async () =
   expect(body.message).toBe(EMPTY_OCEAN_MESSAGE);
 });
 
+// The visible trace: GET /api/ocean says only whether any uncaught bottle
+// exists, so a returning visitor can see the shared ocean persisted without
+// learning how many bottles, which ones, or what they say.
+async function ocean(): Promise<Record<string, unknown>> {
+  const res = await fetch(new URL("/api/ocean", baseUrl));
+  expect(res.status).toBe(200);
+  return res.json();
+}
+
+it("the ocean reports only whether uncaught bottles exist", async () => {
+  expect(await ocean()).toEqual({ empty: true });
+
+  await throwBottle(uniqueMessage("test-7"));
+  expect(await ocean()).toEqual({ empty: false });
+
+  const caught = await (await catchBottle()).json();
+  expect(caught.bottle).not.toBeNull();
+  expect(await ocean()).toEqual({ empty: true });
+});
+
 // Not covered here, and not coverable by this harness: whether a thrown
 // bottle is still catchable after the app restarts or redeploys (real disk
 // persistence vs. an in-memory store that happens to survive one test run).
