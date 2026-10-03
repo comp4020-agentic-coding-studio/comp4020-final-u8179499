@@ -3,7 +3,8 @@
 Crit 8 produced the first working slice of **Message in a Bottle** in four
 committed milestones, with major direction reviewed between milestones:
 definition of good → agent constraints → failing specs → implementation
-([`7c96d67...659e3d9`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/compare/7c96d67...659e3d9)).
+([`7c96d67...659e3d9`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/compare/7c96d67...659e3d9)),
+then a visible-trace fix found by a later requirements audit.
 I worked with Claude Code in a propose → review → approve loop: the agent
 researched or proposed, I corrected, and nothing was written or committed
 until I approved it.
@@ -46,11 +47,15 @@ The result is the README
   concurrent-catch test, were committed failing while both invariants still
   passed
   ([`3c9157b`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/3c9157b)).
-- **Stack.** I chose Node, `node:http`, `node:sqlite` (no runtime
-  dependencies) and plain HTML/CSS/JS, and required messages to be trimmed
-  before validation. The catch is one `UPDATE … WHERE id = (SELECT …
-  caught_at IS NULL ORDER BY RANDOM() LIMIT 1) RETURNING message`, never
-  select-then-update.
+- **Stack.** I chose Node with no runtime dependencies:
+  - **`node:http`:** two actions and an existence check need no framework.
+  - **`node:sqlite`:** durable relational state in one file on Fly's `/data`
+    volume.
+  - **Plain HTML/CSS/JS:** keeps the single-page interaction inspectable.
+
+  Messages are trimmed before validation. The catch is one `UPDATE … WHERE
+  id = (SELECT … caught_at IS NULL ORDER BY RANDOM() LIMIT 1) RETURNING
+  message`, never select-then-update.
 
 ## Correcting: from a working form to an interaction that means something
 
@@ -87,8 +92,15 @@ Browser checks caught bugs the tests and typecheck couldn't:
 ## Verifying
 
 - **Specs before implementation:** 6/6 failing, then green with no test
-  changes. With the two invariants, `pnpm test` passes 8/8, and
+  changes. With the two invariants, `pnpm test` passed 8/8, and
   `pnpm typecheck` is clean.
+- **Requirements audit:** after the docs were written, a re-read of the
+  current Crit 8 spec ("find their trace still there when they come back")
+  showed that bottles persisted but a returning visitor saw an identical page.
+  `GET /api/ocean → { empty }` now reports existence only. Ambient bottles
+  appear only while a real uncaught bottle exists, and a trace test brings
+  the suite to 9/9
+  ([`0129c38`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/0129c38)).
 - **Browser inspection:** desktop and 390px mobile screenshots after every
   pass, and a successful Throw and Catch stepped through frame by frame with
   the bottle's transform, clip and opacity logged.

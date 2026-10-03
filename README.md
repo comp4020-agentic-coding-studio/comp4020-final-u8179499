@@ -34,21 +34,28 @@ between, because there's nothing here designed to hold your attention.
 
 ## Anonymous
 
-Nobody's identity is captured anywhere, not a name, not a cookie, not a
-session token. A bottle is just `id, message, created_at, caught_at` — there
-is no sender or receiver column at all. This isn't a privacy setting I turned
-on; the data to de-anonymise anyone was never collected in the first place.
+The app stores nothing about who you are: no account, no name, no cookie, no
+session identifier. A bottle is just `id, message, created_at, caught_at` —
+there is no sender or receiver column at all. This isn't a privacy setting I
+turned on; the app simply never records who threw or caught a bottle. What
+you write is still up to you, and a message can say who wrote it if its
+writer chooses.
 
 ## Surprising
 
 Catching a bottle returns exactly one random uncaught message — no preview,
-no filtering, no choosing. Once it's caught, that specific bottle is gone for
-good and can never be caught again. You can absolutely throw or catch again
-later, but every single catch is still one blind draw, same as the last.
+no filtering, no choosing. Once it's caught, that bottle leaves the ocean and
+can never be caught again. You can absolutely throw or catch again later, but
+every single catch is still one blind draw, same as the last.
+
+The ocean itself is the trace that's left behind. While at least one uncaught
+bottle is out there, bottles drift across the water; once every bottle has
+been caught, the ocean is empty. That's all it tells you: not how many, not
+whose, not what they say, and you can't pick one out.
 
 ## Human
 
 Messages are plain text, capped at 280 characters — no formatting, no
-attachments, no hashtags, and nothing AI-assisted about writing one. What
-shows up is only ever what a real person sat down and typed, short enough to
-be a note rather than a post.
+attachments, no hashtag features, and the app offers no AI-assisted writing.
+What shows up is whatever someone chose to send, short enough to be a note
+rather than a post.
