@@ -108,10 +108,13 @@ Browser checks caught bugs the tests and typecheck couldn't:
   the waves and bottles, and bottle tilt. A script scrubbed each bottle's full
   drift cycle against the composer at four desktop sizes and on mobile, with
   and without a 280-character caught note: zero collisions.
-- **Persistence:** designed for, not yet verified. Bottles are stored in SQLite
+- **Persistence:** verified on the deployed app. Bottles are stored in SQLite
   at `/data/bottles.db`, the volume `fly.toml` mounts, and tests use a
-  throwaway `DB_PATH`. Nothing is deployed yet, so persistence across a
-  deploy or redeploy has not been checked.
+  throwaway `DB_PATH`. A uniquely identifiable bottle was thrown on the
+  deployed Fly app, the app was redeployed onto the same persistent `/data`
+  volume, and the ocean still reported non-empty afterward; Catch returned
+  the exact pre-redeploy message, confirming persistence across a real Fly
+  redeploy.
 
 **In hindsight:** a single implementation commit hides the Horizon → daytime →
 volumetric sequence from the record. From Crit 9 I'll commit each accepted
