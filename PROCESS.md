@@ -119,3 +119,114 @@ Browser checks caught bugs the tests and typecheck couldn't:
 **In hindsight:** a single implementation commit hides the Horizon → daytime →
 volumetric sequence from the record. From Crit 9 I'll commit each accepted
 direction separately.
+
+## Crit 9: realtime multi-user behaviour
+
+Crit 9 started from the Crit 8 baseline above: bottles persist, but another
+already-open browser never learns that someone else threw or caught one
+without refreshing. Before writing anything, I had the agent audit the
+running server, client, tests, README, and CLAUDE.md against the Crit 9
+brief, rather than guessing at a transport straight away.
+
+### Directing: the multi-user decision, before any transport
+
+The audit surfaced the real problem: `GET /api/ocean` only ever reports
+`{ empty }`, a single boolean that moves on exactly two transitions (ocean's
+first bottle; ocean's last bottle caught). In a live demo where the ocean
+already holds a bottle, most individual throws and catches would change
+nothing that boolean reports — so simply pushing that same field instead of
+polling it would satisfy "realtime" in a transport sense while failing the
+actual spec line, since most mutations would stay invisible.
+
+That reframed the task: the product decision had to come before any
+transport choice. I compared three options against README's Small,
+Anonymous, Surprising and Human — presence + live activity; pushing the
+existing boolean as-is; and revealing a coarse/bucketed fullness state — and
+rejected all three (the bucketed option twice over: it also doesn't actually
+guarantee every mutation becomes visible, since consecutive mutations can
+land in the same bucket). I chose **anonymous live activity, not presence**:
+every successful Throw or Catch broadcasts a content-free `thrown`/`caught`
+event to every open session, including the one that caused it, exposing
+nothing else. This is recorded with its alternatives and trade-offs in
+[`decisions/0001-crit9-realtime-multiuser-behaviour.md`](decisions/0001-crit9-realtime-multiuser-behaviour.md)
+([`4a35f52`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/4a35f52)).
+
+### Grounding: red specs, a harness bug, then the server
+
+I wrote the realtime contract as six failing specs against a `GET /api/events`
+endpoint that didn't exist yet
+([`6ecee15`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/6ecee15)).
+Running the full suite exposed a second, unrelated problem first: two spec
+files racing against the one shared running server and its one shared
+database, since Vitest ran them in parallel — three Crit 8 tests failed
+intermittently with no change to their own logic. I confirmed this with
+`--no-file-parallelism` (all Crit 8 tests passed), then fixed the harness
+itself with `fileParallelism: false` in `vitest.config.ts` rather than
+touching or weakening any existing test. With that fixed, exactly the five
+new realtime specs were red, each failing for the same, correct reason:
+`GET /api/events` returned 404.
+
+The server implementation
+([`8bccc14`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/8bccc14))
+keeps persistence and broadcast separate: an in-memory `Set` of open SSE
+connections, broadcasting a bare `event: thrown`/`caught` frame only after
+`throwBottle`/`catchBottle` already succeeded — Catch's existing atomic
+`UPDATE … RETURNING` is untouched, so a losing concurrent catch still emits
+nothing. The first pass still failed three of the five specs with a 5-second
+timeout instead of turning green. A standalone `fetch()` probe against
+`/api/events` reproduced a hang with no response at all, which traced to
+`res.writeHead()` alone not flushing headers to the socket in Node — a
+client connecting before any broadcast ever happened waited forever for
+bytes that were never sent. `res.flushHeaders()` right after `writeHead()`
+fixed it; all 15 specs passed after that.
+
+### Correcting: anonymous reactions, not a feed
+
+The client
+([`8000c9a`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/8000c9a))
+adds one `EventSource` to `/api/events` and a brief, content-free reaction on
+the existing sea element: Throw brightens it outward, Catch dims it inward,
+identical for every connected browser including the one that acted, so the
+reaction only ever fires from the received event, never duplicated from the
+Throw/Catch POST handlers. No identity, presence count, message preview,
+bottle count, or activity history is introduced anywhere. Reduced-motion
+users keep the same reaction, shortened from 700ms to 350ms rather than
+removed, matching the file's existing reduced-motion convention.
+
+### Verifying
+
+- **Specs:** red for the right reason (missing endpoint, not a syntax or
+  setup error), then 15/15 green after the server fix, confirmed again after
+  the client change.
+- **Reduced motion:** checked with an emulated `prefers-reduced-motion:
+  reduce` context — the pulse class still applies, with its CSS
+  `animation-duration` measured at `0.35s` there versus `0.7s` normally.
+- **Deployment:** through the existing GitHub Actions / Fly workflow only —
+  pushing each commit to `main` ran the repo's own `check` then `deploy`
+  jobs (no manual `flyctl deploy`), and CI's own "verify the deployed site is
+  online" step passed on both the server and client pushes.
+- **Deployed, multi-client verification:** against the real
+  `https://comp4020-final-u8179499.fly.dev`, not localhost. Two independent
+  SSE clients (raw `fetch` against `/api/events`, parsing the wire frames
+  directly) plus a separate two-tab headless-browser pass confirmed: both
+  clients open the stream; a Throw and a Catch each propagate to both
+  already-connected clients without reconnecting; the event frames contain
+  no message text, id, count, or session/user identity; an unsuccessful
+  catch emits nothing; `GET /api/ocean` is still exactly `{ empty: boolean
+  }`; and the two browser tabs showed the bright/dark reaction remotely with
+  no reload. Every event arrived effectively instantly, well inside the
+  ~1-second bar. A connection was also left open and idle for 4 seconds
+  against production before throwing again, confirming Fly's proxy keeps a
+  single SSE connection alive rather than silently dropping it.
+- **A verification bug, not a production one:** a liveness check I wrote
+  treated `ReadableStreamDefaultReader.closed` as a boolean, when it is
+  actually a Promise — so the check was always false regardless of the real
+  connection state. I caught this, replaced it with a real liveness probe
+  (idle, then confirm the *same* connection still delivers), and confirmed
+  the original failure was in my script, not in `src/server.ts` or the
+  deployed app.
+- **Cleanup:** that same liveness check had thrown a bottle on the real
+  production app without catching it. Caught via `GET /api/ocean` reporting
+  `{ "empty": false }` after verification, drained with a real
+  `POST /api/bottles/catch`, and confirmed `{ "empty": true }` on the live
+  app afterward.
