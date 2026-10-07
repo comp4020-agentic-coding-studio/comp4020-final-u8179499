@@ -25,6 +25,26 @@ const readmeHtml = readFileSync(join(here, "html/readme.html"), "utf8").replace(
 const MAX_MESSAGE_LENGTH = 280;
 const EMPTY_OCEAN_MESSAGE = "The ocean is quiet. No bottles to catch yet.";
 
+// Crit 9: every currently open GET /api/events connection, held in memory
+// only. No identity, no session, no history — just "who's listening right
+// now", which is exactly what lets every connected client (including the one
+// that triggered the action) receive the same anonymous event.
+const sseClients = new Set<ServerResponse>();
+
+// The event payload is the action type and nothing else: no id, no message,
+// no count. Removes a client the moment a write to it fails, which is the
+// only signal a plain `node:http` response gives for "the other end is gone".
+function broadcastEvent(type: "thrown" | "caught"): void {
+  const frame = `event: ${type}\ndata:\n\n`;
+  for (const client of sseClients) {
+    try {
+      client.write(frame);
+    } catch {
+      sseClients.delete(client);
+    }
+  }
+}
+
 function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
     let raw = "";
@@ -67,6 +87,24 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === "GET" && pathname === "/api/events") {
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+    // Node buffers headers until the first write, so without this a client
+    // that connects before anyone throws or catches never even sees a
+    // response — flush now, then the connection just sits open and idle
+    // until a broadcast has something to send it.
+    res.flushHeaders();
+    sseClients.add(res);
+    req.on("close", () => {
+      sseClients.delete(res);
+    });
+    return;
+  }
+
   if (req.method === "POST" && pathname === "/api/bottles") {
     let body: unknown;
     try {
@@ -83,6 +121,7 @@ const server = createServer(async (req, res) => {
       return;
     }
     throwBottle(db, message);
+    broadcastEvent("thrown");
     send(res, 201, "text/plain", "thrown");
     return;
   }
@@ -90,6 +129,7 @@ const server = createServer(async (req, res) => {
   if (req.method === "POST" && pathname === "/api/bottles/catch") {
     const result = catchBottle(db);
     if (result.bottle) {
+      broadcastEvent("caught");
       sendJson(res, 200, { bottle: result.bottle });
     } else {
       sendJson(res, 200, { bottle: null, message: EMPTY_OCEAN_MESSAGE });
