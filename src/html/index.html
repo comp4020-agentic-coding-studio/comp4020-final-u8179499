@@ -84,6 +84,45 @@
         background: linear-gradient(to bottom, var(--sea-top), var(--sea-bottom));
       }
 
+      /* Crit 9: a brief, content-free reaction of the sea itself — the only
+         perceptible trace that a Throw or Catch happened somewhere,
+         anonymous and identical for every viewer, including the one whose
+         own action caused it. No count, no label, no position tied to any
+         bottle. Thrown and caught get distinct but equally subtle
+         treatments — brightening outward vs. dimming inward — since the
+         ADR allows the action type itself to be visible. */
+      @keyframes ocean-pulse-thrown {
+        0% {
+          filter: brightness(1) saturate(1);
+        }
+        30% {
+          filter: brightness(1.22) saturate(1.15);
+        }
+        100% {
+          filter: brightness(1) saturate(1);
+        }
+      }
+
+      @keyframes ocean-pulse-caught {
+        0% {
+          filter: brightness(1) saturate(1);
+        }
+        35% {
+          filter: brightness(0.86) saturate(0.88);
+        }
+        100% {
+          filter: brightness(1) saturate(1);
+        }
+      }
+
+      .sea.realtime-pulse-thrown {
+        animation: ocean-pulse-thrown 700ms ease-out;
+      }
+
+      .sea.realtime-pulse-caught {
+        animation: ocean-pulse-caught 700ms ease-in-out;
+      }
+
       /* filled wave masses, far to near. Each nearer mass covers the lower
          part of the one behind it, so each shows as a lit face darkening
          into a trough. Strips are 200% wide holding two identical periods,
@@ -830,6 +869,10 @@
         .empty-message {
           transition-duration: 150ms;
         }
+        .sea.realtime-pulse-thrown,
+        .sea.realtime-pulse-caught {
+          animation-duration: 350ms;
+        }
       }
     </style>
   </head>
@@ -1024,6 +1067,7 @@
       const dockAnchor = document.getElementById("dock-anchor");
       const horizonAnchor = document.getElementById("horizon-anchor");
       const scene = document.querySelector(".scene");
+      const sea = document.querySelector(".sea");
 
       const MAX = 280;
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1211,6 +1255,44 @@
           scene.classList.toggle("has-bottles", empty === false);
         } catch {}
       }
+
+      // Crit 9: a brief, anonymous reaction to anyone's Throw or Catch,
+      // arriving over /api/events. The event carries only its type — no id,
+      // message, count, or identity — so the type is the only thing this can
+      // react to: thrown brightens outward, caught dims inward, neither tied
+      // to any particular bottle on screen. It fires for every connected
+      // browser alike, including the one whose own action caused it, so the
+      // reaction lives only here: handleThrow/handleCatch never trigger it
+      // directly, to avoid playing it twice for the browser that just acted.
+      const PULSE_CLASSES = ["realtime-pulse-thrown", "realtime-pulse-caught"];
+
+      function pulseOcean(kind) {
+        sea.classList.remove(...PULSE_CLASSES);
+        void sea.offsetWidth; // restart the animation if one is still playing
+        sea.classList.add(`realtime-pulse-${kind}`);
+      }
+
+      sea.addEventListener("animationend", (event) => {
+        if (event.animationName === "ocean-pulse-thrown" || event.animationName === "ocean-pulse-caught") {
+          sea.classList.remove(...PULSE_CLASSES);
+        }
+      });
+
+      const realtimeEvents = new EventSource("/api/events");
+      realtimeEvents.addEventListener("thrown", () => {
+        pulseOcean("thrown");
+        syncOcean();
+      });
+      realtimeEvents.addEventListener("caught", () => {
+        pulseOcean("caught");
+        syncOcean();
+      });
+      // A fresh connection, or one reconnecting after a drop, may have missed
+      // activity while it wasn't open. There is no backlog to replay — just
+      // resync against whatever the durable ocean state actually is now.
+      realtimeEvents.addEventListener("open", () => {
+        syncOcean();
+      });
 
       function pause(ms) {
         return new Promise((resolve) => setTimeout(resolve, ms));
