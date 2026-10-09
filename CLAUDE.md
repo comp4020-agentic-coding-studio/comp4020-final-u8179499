@@ -59,13 +59,23 @@ don't let them drift apart.
   `visualLevel` is the exact count of uncaught bottles for 0-3, and the
   single bucket `"many"` for 4 or more. It is computed from a
   bounded-cost query (`LIMIT 4`) and never states an exact count once
-  real activity reaches 4 or more.
-- The frontend's decorative/ambient bottles are **visual representations
-  of `visualLevel`, not database rows and not selectable messages**.
-  There is no mapping from a specific decorative bottle on screen to a
-  specific row in `bottles`, and a person can never click, pick, or
-  preview one — Catch remains the only way to get a message, and it
-  remains a blind random draw regardless of what the ambient scene shows.
+  real activity reaches 4 or more. **This exactness is an API/data
+  contract and must stay exact** — never widen `"many"` into a count,
+  never collapse 0-3 into a bucket.
+- How the frontend renders `visualLevel` is a separate, responsive design
+  choice, not a second contract: it aims to show that many decorative
+  bottles when there's `0`, `1`, `2`, or `3`, but the exact number drawn
+  and where they sit on screen may adapt to viewport size and available
+  space. Don't read "the ocean shows exactly N decorative bottles on
+  every screen" as a requirement to enforce — the requirement is that
+  `visualLevel` itself, the data, is exact for 0-3.
+- The frontend's decorative/ambient bottles are **a responsive visual
+  representation of ocean activity, not database rows and not a precise
+  visual counter**. There is no mapping from a specific decorative bottle
+  on screen to a specific row in `bottles`, and a person can never click,
+  pick, or preview one — Catch remains the only way to get a message, and
+  it remains a blind random draw regardless of what the ambient scene
+  shows.
 - In `"many"` mode the decorative population is a randomly-varying count
   (2-4 lanes) that deliberately does not track the real number beyond
   "4 or more". Never build a feature as if it were a literal, precise

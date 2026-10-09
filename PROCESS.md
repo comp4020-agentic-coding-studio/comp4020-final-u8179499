@@ -262,15 +262,26 @@ of whether the ocean actually held one message or fifty). Seeing that
 rendered on screen, rather than reading it as a line in a spec, is what made
 me treat it as a defect worth fixing in its own right, separately from the
 visual redesign in progress. Only then did I make the product call: ambient
-bottles should track the real uncaught-message count exactly for small
-numbers (0, 1, 2, 3) and become a deliberately imprecise "busy ocean" once
-the count passes 3, never an exact number beyond that. I authorized the
-smallest backend change this required — a new `visualLevel` field alongside
-the existing `empty` boolean — and asked for it to be written up as a new,
-separate ADR for my review rather than silently rewritten into the
-historical Crit 9 record. That became
+bottles should show exactly as many decorative bottles on screen as there
+are real uncaught messages, for small numbers (0, 1, 2, 3), and become a
+deliberately imprecise "busy ocean" once the count passes 3, never an exact
+number beyond that. I authorized the smallest backend change this required
+— a new `visualLevel` field alongside the existing `empty` boolean — and
+asked for it to be written up as a new, separate ADR for my review rather
+than silently rewritten into the historical Crit 9 record. That became
 [`decisions/0002-ambient-bottle-population-visibility.md`](decisions/0002-ambient-bottle-population-visibility.md),
-now **Accepted** after my review.
+now **Accepted** after my review, and implemented as a literal on-screen
+count for 0-3.
+
+I later relaxed that on-screen part of the decision: the exact 0-3 count
+must still hold for the underlying data (`visualLevel` itself, which stays
+a contract that may never regress), but exactly how many decorative bottles
+actually get drawn for a given `visualLevel`, and where, is now a
+responsive, artistic design choice rather than a strict promise that every
+screen renders precisely one bottle per message. This later relaxation is
+recorded as an amendment to ADR 0002 — it changes what the original
+decision requires of the rendered scene, not what it required at the time
+it was made.
 
 ### Grounding and correcting: defects found, and what fixed them
 

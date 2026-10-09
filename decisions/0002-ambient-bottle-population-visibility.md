@@ -43,9 +43,18 @@ table size and indexing, not on `LIMIT 4` alone.
 The frontend uses this to drive how many decorative bottles are visible:
 
 - 0 → no decorative bottles.
-- 1, 2, 3 → exactly that many, shown as specific existing drift lanes.
+- 1, 2, 3 → the ocean aims to show that many decorative bottles, laid out
+  across existing drift lanes.
 - "many" → a randomly-varying population of 2-4 lanes that drift in and out
   over time, never settling on a number and never claiming to be exact.
+
+**The 0-3 exactness above is a data contract on `visualLevel`, not a pixel
+contract on the rendered scene.** The owner has since clarified (see
+"Clarification" below) that exactly how many decorative bottles are drawn
+for a given `visualLevel`, and where they're placed, is an artistic,
+responsive design choice that may adapt to a screen's available space —
+not a strict promise that every device renders precisely one bottle per
+uncaught message.
 
 This is **read-only, decorative metadata**. Catch is unaffected: it remains
 `POST /api/bottles/catch`, a single atomic `UPDATE … RETURNING` with no
@@ -61,6 +70,32 @@ sync, the same way `empty` always was.
 - sender/receiver or any identity
 - activity history
 - an exact count once the real number reaches 4 or more
+
+## Clarification: frontend rendering vs. API exactness
+
+The original ask that motivated this decision (see Context above) described
+wanting "1, 2, 3 bottles shown exactly." That described the goal for the
+*data* — the owner has since clarified that it was never meant to lock the
+*rendered scene* to a pixel-exact count on every possible screen size. Two
+separate things were previously easy to conflate, and this clarifies them:
+
+1. **The API contract** (`visualLevel` is exact for 0-3, capped at `"many"`
+   for 4+) is unchanged by this clarification and remains exact. This is
+   the part that must never regress.
+2. **How the frontend renders that data** — how many decorative bottles
+   actually appear on screen for a given `visualLevel`, and where — is an
+   artistic, responsive design choice, not a second contract. It may adapt
+   to the space available on a given viewport (for instance, a very narrow
+   screen may not have room for the same bottle layout as a wide one). The
+   requirement is that the scene aims to represent `visualLevel`
+   faithfully, not that every device renders identically or that the
+   bottle count can be used to re-derive the exact data value by counting
+   pixels.
+
+This does not loosen or conceal the opacity trade-off this ADR makes at the
+API level (see "Costs and trade-offs" below) — it only removes an
+unintended, stricter promise about rendering that was never the actual
+product requirement.
 
 ## What this supersedes in ADR 0001, and what it doesn't
 

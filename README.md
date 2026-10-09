@@ -52,16 +52,19 @@ The ocean itself is the trace that's left behind: a moonlit night sea that
 drifts and rocks on its own, decorated with partly-submerged bottles that
 represent how many uncaught messages are out there — not the messages
 themselves. None of them can be clicked, picked, or previewed; they're a
-visual count, not a list, and not a one-to-one stand-in for any particular
-stored bottle. When there's one, two, or three uncaught bottles out there,
-that many decorative bottles drift across the water — no more, no less. Once
-there are **four or more**, the water just looks lively: a handful of
-decorative bottles drift in and out, the number varying over time, so you can
-no longer tell how many are really out there, only that there are several.
-The app itself never states an exact count once it passes three — though
-that's a statement about what the API reports, not a guarantee that the real
-number is unknowable to a patient observer who sits and watches every throw
-and catch for long enough.
+responsive visual representation of ocean activity, not a precise on-screen
+counter, and not a one-to-one stand-in for any particular stored bottle. For
+zero, one, two, or three uncaught messages, the app knows that count exactly
+and the ocean aims to show that many decorative bottles — but exactly how
+many are drawn, and where, is an artistic, responsive choice that can adapt
+to the space available on a given screen, not a guarantee of one bottle per
+message on every device. Once there are **four or more**, the water just
+looks lively: a handful of decorative bottles drift in and out, the number
+varying over time, so you can no longer tell how many are really out there,
+only that there are several. The app itself never states an exact count once
+it passes three — though that's a statement about what the API reports, not
+a guarantee that the real number is unknowable to a patient observer who
+sits and watches every throw and catch for long enough.
 
 Throwing or catching also sends a brief, silent ripple across the water to
 everyone who currently has the page open, including you. It reveals that a
