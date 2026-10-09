@@ -48,13 +48,11 @@ The frontend uses this to drive how many decorative bottles are visible:
 - "many" → a randomly-varying population of 2-4 lanes that drift in and out
   over time, never settling on a number and never claiming to be exact.
 
-**The 0-3 exactness above is a data contract on `visualLevel`, not a pixel
-contract on the rendered scene.** The owner has since clarified (see
-"Clarification" below) that exactly how many decorative bottles are drawn
-for a given `visualLevel`, and where they're placed, is an artistic,
-responsive design choice that may adapt to a screen's available space —
-not a strict promise that every device renders precisely one bottle per
-uncaught message.
+The 1/2/3 line above originally meant, and was implemented as, an exact
+on-screen count. The owner has since deliberately relaxed that: see
+"Clarification" below for how the on-screen requirement changed while the
+`visualLevel` data contract (0-3 exact, `"many"` for 4+) stayed exactly as
+it was.
 
 This is **read-only, decorative metadata**. Catch is unaffected: it remains
 `POST /api/bottles/catch`, a single atomic `UPDATE … RETURNING` with no
@@ -71,31 +69,35 @@ sync, the same way `empty` always was.
 - activity history
 - an exact count once the real number reaches 4 or more
 
-## Clarification: frontend rendering vs. API exactness
+## Clarification: a later, deliberate relaxation of the on-screen requirement
 
-The original ask that motivated this decision (see Context above) described
-wanting "1, 2, 3 bottles shown exactly." That described the goal for the
-*data* — the owner has since clarified that it was never meant to lock the
-*rendered scene* to a pixel-exact count on every possible screen size. Two
-separate things were previously easy to conflate, and this clarifies them:
+The original ask that motivated this decision (see Context above) was not
+only a data requirement — it explicitly asked for exactly 1, 2, or 3
+decorative bottles to be shown **on screen** for 1-3 real uncaught messages,
+and that is what was implemented: a literal, exact on-screen count for 0-3,
+via specific drift lanes. That history is real and this clarification does
+not deny or retroactively reinterpret it.
 
-1. **The API contract** (`visualLevel` is exact for 0-3, capped at `"many"`
-   for 4+) is unchanged by this clarification and remains exact. This is
-   the part that must never regress.
-2. **How the frontend renders that data** — how many decorative bottles
-   actually appear on screen for a given `visualLevel`, and where — is an
-   artistic, responsive design choice, not a second contract. It may adapt
-   to the space available on a given viewport (for instance, a very narrow
-   screen may not have room for the same bottle layout as a wide one). The
-   requirement is that the scene aims to represent `visualLevel`
-   faithfully, not that every device renders identically or that the
-   bottle count can be used to re-derive the exact data value by counting
-   pixels.
+What changed is a separate, later decision: the owner deliberately relaxed
+that on-screen requirement, to allow the rendered bottle count and
+placement to vary responsively and artistically across screen sizes, rather
+than requiring a pixel-exact count on every device. Concretely:
+
+1. **The API contract is unchanged and remains exact.** `visualLevel` is
+   still exact for 0-3 uncaught messages and capped at `"many"` for 4+.
+   This was never in question and must never regress.
+2. **The on-screen rendering requirement is relaxed, as of this
+   clarification.** The ocean no longer has to display precisely one
+   decorative bottle per message on every screen size. Exactly how many
+   are drawn for a given `visualLevel`, and where, is now an artistic,
+   responsive design choice that may adapt to the space available on a
+   given viewport (for instance, a very narrow screen may not have room
+   for the same bottle layout as a wide one).
 
 This does not loosen or conceal the opacity trade-off this ADR makes at the
-API level (see "Costs and trade-offs" below) — it only removes an
-unintended, stricter promise about rendering that was never the actual
-product requirement.
+API level (see "Costs and trade-offs" below) — it changes what the decision
+requires of the *rendered scene* going forward, not what the API states,
+and not what was originally decided or built at the time.
 
 ## What this supersedes in ADR 0001, and what it doesn't
 
