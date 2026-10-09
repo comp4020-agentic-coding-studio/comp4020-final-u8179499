@@ -230,3 +230,110 @@ removed, matching the file's existing reduced-motion convention.
   `{ "empty": false }` after verification, drained with a real
   `POST /api/bottles/catch`, and confirmed `{ "empty": true }` on the live
   app afterward.
+
+## Post-Crit-9 Visual Redesign
+
+Everything above this section was verified against the deployed Fly app.
+**Everything in this section has so far been verified only locally**,
+against an isolated throwaway database — not against
+`https://comp4020-final-u8179499.fly.dev`. As of this section, nothing
+described here has been committed, deployed, or redeployed; the Crit 9
+production verification above is still the only production verification
+this project has.
+
+### Directing: starting from the look, then fixing what the look exposed
+
+After Crit 9 shipped, I went back to the running app as a *made thing*,
+independent of whether its tests passed, and didn't like how it looked: the
+ocean scene read as generic rather than specific, and the ambient/decorative
+bottles visually floated on top of the water rather than looking like they
+belonged in it. This started as a broad visual redesign request — make the
+moonlit ocean and its decorative bottles look more integrated and natural —
+not a product-logic change. I directed the agent to investigate root causes
+rather than paint over symptoms, and to verify with the real running app at
+every step; I explicitly told it not to claim a visual issue was fixed
+because an automated test passed.
+
+It was only *during* that visual refinement — redesigning how the decorative
+bottles sit in and relate to the water — that an existing product problem
+became visible rather than just theoretical: the ambient population was an
+all-or-nothing effect (zero decorative bottles, or exactly three, regardless
+of whether the ocean actually held one message or fifty). Seeing that
+rendered on screen, rather than reading it as a line in a spec, is what made
+me treat it as a defect worth fixing in its own right, separately from the
+visual redesign in progress. Only then did I make the product call: ambient
+bottles should track the real uncaught-message count exactly for small
+numbers (0, 1, 2, 3) and become a deliberately imprecise "busy ocean" once
+the count passes 3, never an exact number beyond that. I authorized the
+smallest backend change this required — a new `visualLevel` field alongside
+the existing `empty` boolean — and asked for it to be written up as a new,
+separate ADR for my review rather than silently rewritten into the
+historical Crit 9 record. That became
+[`decisions/0002-ambient-bottle-population-visibility.md`](decisions/0002-ambient-bottle-population-visibility.md),
+now **Accepted** after my review.
+
+### Grounding and correcting: defects found, and what fixed them
+
+This pass surfaced several real visual defects, each one caught by actually
+looking at the running app rather than trusting green tests, and each one
+corrected before I allowed the next step:
+
+- **A yellow rectangular artifact** flashed around the bottle during the
+  Throw/Catch flight animation. Root cause: a Chromium rendering quirk where
+  `filter: drop-shadow()` and an *animated* `clip-path` on the same
+  transformed element produce a stray rectangular highlight instead of a
+  shape-following shadow. Fixed by splitting the flying bottle into a
+  wrapper element (owning the transform, opacity, and glow) and an inner
+  element (owning only the clip-path), animated in parallel — confirmed
+  gone by sampling rendered frames across the entire flight, not just
+  checking the CSS.
+- **Ambient bottles looked like they were floating above the water**, not
+  in it. I rejected the first visual pass for this reason and asked
+  specifically for 30-50% visible submersion with natural water occlusion
+  and tinting. The first implementation of the tint (a plain rectangular
+  overlay with a CSS gradient) produced a visible rotated-rectangle artifact
+  when the bottle rocked — caught via a zoomed screenshot, not by the human
+  eye alone at normal zoom. It was corrected by switching to an SVG-native
+  `clipPath` shaped exactly like the bottle's own glass outline, which
+  cannot produce a rectangular bounding artifact.
+- I then found the submerged part **still too visible** on a second look
+  and asked for the mask and tint to be pushed further (steeper fade,
+  stronger blue-green tint) while keeping the upper bottle and cork clearly
+  readable — a second, independent round of my own visual correction on top
+  of the first.
+- A **realtime visual discontinuity**: the client that threw a bottle could
+  see its own ambient lane activate while its own multi-second flight
+  animation was still playing, reading as a second bottle appearing before
+  the first had landed. Fixed by deferring the *acting* client's own
+  ambient-population update until its own flight animation finishes, while
+  every other (bystander) client still updates immediately — re-verified
+  with two independent browser sessions after every later visual change
+  that touched the same markup, to make sure later work hadn't silently
+  broken it.
+- The multiline **textarea scrollbar looked like a default, unstyled
+  browser scrollbar**. Restyled to the dark ocean aesthetic using the
+  standard `scrollbar-color`/`scrollbar-width` properties with a
+  `::-webkit-scrollbar-*` fallback. Verifying this exposed a tooling
+  limitation, not an app bug: headless Chromium does not paint scrollbars
+  into screenshots at all, confirmed with a minimal sanity test outside the
+  app, so real verification required a headed browser.
+
+### Verifying: a full local acceptance pass before anything is committed
+
+Before allowing a commit, I required a comprehensive, verification-only
+pass against the actual running app via Playwright/Chromium (not just
+`pnpm check`), using an isolated local database the production volume never
+touches. This covered: visual inspection at three viewports (no title
+overflow, no stray artifacts, zero console errors); the full Throw/Catch
+workflow including empty/whitespace rejection, the 280-character cap,
+single-use bottles, and repeated cycles; the ambient population matrix
+(exact 0/1/2/3, dynamic 2-4-lane "many", and the reduced-motion static
+fallback); two-independent-browser-session realtime behaviour, including
+confirming the SSE payload carries no data at all and that an unsuccessful
+catch broadcasts nothing; persistence across both a page refresh and a full
+local server-process restart against the same database file; and
+keyboard-only operation (correct tab order, Enter/Space activation, visible
+focus states). `pnpm check` (16/16) and `pnpm check:evidence` passed
+throughout. No defect survived this pass. None of it has been run against
+the deployed Fly app, and this section should not be read as claiming it
+has.

@@ -24,12 +24,16 @@ export function openDatabase(path: string): DatabaseSync {
   return db;
 }
 
-// Existence only: whether any uncaught bottle is out there, never how many.
-export function oceanIsEmpty(db: DatabaseSync): boolean {
-  const row = db
-    .prepare("SELECT EXISTS(SELECT 1 FROM bottles WHERE caught_at IS NULL) AS present")
-    .get() as { present: number };
-  return row.present === 0;
+export type OceanVisualLevel = 0 | 1 | 2 | 3 | "many";
+
+// Capped visual population (decisions/0002-ambient-bottle-population-visibility.md):
+// the exact count for 0-3 uncaught bottles, otherwise the single bucket
+// "many". LIMIT 4 means this never scans more of the table than it needs to
+// tell 3 from 4-or-more, so it stays cheap regardless of how large the ocean
+// actually gets.
+export function oceanVisualLevel(db: DatabaseSync): OceanVisualLevel {
+  const rows = db.prepare("SELECT 1 FROM bottles WHERE caught_at IS NULL LIMIT 4").all();
+  return rows.length === 4 ? "many" : (rows.length as 0 | 1 | 2 | 3);
 }
 
 export function throwBottle(db: DatabaseSync, message: string): void {

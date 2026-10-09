@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { openDatabase, throwBottle, catchBottle, oceanIsEmpty } from "./db.ts";
+import { openDatabase, throwBottle, catchBottle, oceanVisualLevel } from "./db.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
@@ -83,7 +83,8 @@ const server = createServer(async (req, res) => {
   }
 
   if (req.method === "GET" && pathname === "/api/ocean") {
-    sendJson(res, 200, { empty: oceanIsEmpty(db) });
+    const visualLevel = oceanVisualLevel(db);
+    sendJson(res, 200, { empty: visualLevel === 0, visualLevel });
     return;
   }
 

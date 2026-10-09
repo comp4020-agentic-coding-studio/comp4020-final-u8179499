@@ -131,14 +131,44 @@ async function ocean(): Promise<Record<string, unknown>> {
 }
 
 it("the ocean reports only whether uncaught bottles exist", async () => {
-  expect(await ocean()).toEqual({ empty: true });
+  expect(await ocean()).toEqual({ empty: true, visualLevel: 0 });
 
   await throwBottle(uniqueMessage("test-7"));
-  expect(await ocean()).toEqual({ empty: false });
+  expect(await ocean()).toEqual({ empty: false, visualLevel: 1 });
 
   const caught = await (await catchBottle()).json();
   expect(caught.bottle).not.toBeNull();
-  expect(await ocean()).toEqual({ empty: true });
+  expect(await ocean()).toEqual({ empty: true, visualLevel: 0 });
+});
+
+// decisions/0002-ambient-bottle-population-visibility.md: the ambient bottle
+// display needs to tell 0/1/2/3 apart exactly, and anything from 4 up is
+// capped to a single "many" bucket — never an exact number past 3.
+it("the ocean's visualLevel is exact for 0-3 uncaught bottles, then caps at \"many\"", async () => {
+  expect((await ocean()).visualLevel).toBe(0);
+
+  const messages = Array.from({ length: 5 }, (_, i) => uniqueMessage(`test-level-${i}`));
+  for (const [i, message] of messages.entries()) {
+    await throwBottle(message);
+    const expected = i < 3 ? i + 1 : "many";
+    expect((await ocean()).visualLevel).toBe(expected);
+  }
+
+  // one more on top of "many" (6 uncaught total) must still read as "many"
+  await throwBottle(uniqueMessage("test-level-extra"));
+  expect((await ocean()).visualLevel).toBe("many");
+
+  // catch down from 6 to 3 — still "many" the whole way until it drops below 4
+  await catchBottle();
+  await catchBottle();
+  await catchBottle();
+  expect((await ocean()).visualLevel).toBe(3);
+
+  // draining the rest passes back through the exact 2/1/0 states
+  for (const expected of [2, 1, 0] as const) {
+    await catchBottle();
+    expect((await ocean()).visualLevel).toBe(expected);
+  }
 });
 
 // Not covered here, and not coverable by this harness: whether a thrown

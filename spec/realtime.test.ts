@@ -206,13 +206,18 @@ it("concurrent Catch attempts on one bottle produce exactly one successful Catch
   ).toHaveLength(1);
 });
 
-// Guard, not a red spec: this must already pass and must keep passing —
-// Crit 9's realtime channel is additive, and must never widen the existing
-// durable-state shape Crit 8 fixed.
-it("GET /api/ocean stays exactly { empty: boolean } — Crit 9 does not widen it", async () => {
+// Guard, not a red spec: this must already pass and must keep passing.
+// decisions/0002-ambient-bottle-population-visibility.md is a deliberate,
+// narrow widening of the Crit 8 durable-state shape (adds a capped
+// `visualLevel`, never an exact count past 3) — this guard now locks *that*
+// shape instead of the pre-0002 one, so any further widening is caught here
+// too.
+it("GET /api/ocean stays exactly { empty: boolean, visualLevel }, capped at 3 — ADR 0002 does not widen it further", async () => {
   const res = await fetch(new URL("/api/ocean", baseUrl));
   expect(res.status).toBe(200);
   const body = await res.json();
-  expect(Object.keys(body).sort()).toEqual(["empty"]);
+  expect(Object.keys(body).sort()).toEqual(["empty", "visualLevel"]);
   expect(typeof body.empty).toBe("boolean");
+  expect([0, 1, 2, 3, "many"]).toContain(body.visualLevel);
+  expect(body.empty).toBe(body.visualLevel === 0);
 });
