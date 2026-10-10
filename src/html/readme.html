@@ -4,12 +4,99 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>About — Message in a Bottle</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0a0d16;
+        --fg: #e8e6ee;
+        --muted: #9a97a8;
+        --accent: #9bdcee;
+        --code-bg: #171b28;
+        --border: #2a2f40;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+      }
+      body {
+        color: var(--fg);
+        font-family: Georgia, "Times New Roman", serif;
+        line-height: 1.65;
+        padding: 2.5rem 1.25rem 4rem;
+      }
+      main {
+        max-width: 42rem;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 1.85rem;
+        font-weight: 400;
+        letter-spacing: 0.01em;
+        margin: 0 0 1.5rem;
+      }
+      h2 {
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: var(--accent);
+        margin: 2.25rem 0 0.75rem;
+      }
+      p {
+        margin: 0 0 1rem;
+        overflow-wrap: break-word;
+        word-break: break-word;
+      }
+      a {
+        color: var(--accent);
+        text-decoration-color: rgba(155, 220, 238, 0.45);
+        text-underline-offset: 0.15em;
+        overflow-wrap: break-word;
+      }
+      a:hover {
+        text-decoration-color: currentColor;
+      }
+      a:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-radius: 2px;
+      }
+      code {
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        font-size: 0.9em;
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        padding: 0.1em 0.35em;
+        overflow-wrap: break-word;
+      }
+      .back-link {
+        display: inline-block;
+        margin-top: 2.5rem;
+        color: var(--muted);
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 0.9rem;
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+      }
+      .back-link:hover {
+        color: var(--fg);
+        border-bottom-color: currentColor;
+      }
+      .back-link:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-radius: 2px;
+      }
+    </style>
   </head>
   <body>
     <main>
-      <pre>
-@README@
-      </pre>
+      @README_HTML@
+      <a class="back-link" href="/">&larr; Back to Ocean</a>
     </main>
   </body>
 </html>

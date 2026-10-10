@@ -16,11 +16,69 @@ const db = openDatabase(DB_PATH);
 
 const indexHtml = readFileSync(join(here, "html/index.html"), "utf8");
 
-const readmeBody = readFileSync(join(root, "README.md"), "utf8")
-  .replace(/&/g, "&amp;")
-  .replace(/</g, "&lt;")
-  .replace(/>/g, "&gt;");
-const readmeHtml = readFileSync(join(here, "html/readme.html"), "utf8").replace("@README@", readmeBody);
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// Escapes a run of plain text, then applies the only two character-level
+// styles README.md uses: **bold** and *italic*. Used both for top-level
+// paragraph text and inside a link's label, which is the only place
+// README.md nests one inline style inside another.
+function renderEmphasis(raw: string): string {
+  return escapeHtml(raw)
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+}
+
+// Renders one block's inline Markdown: `code spans` and [text](url) links —
+// the only inline elements besides bold/italic that README.md uses — then
+// renderEmphasis for everything in between. Code and link-destination text
+// are escaped directly rather than through renderEmphasis, so a literal `*`
+// inside either can never be mistaken for emphasis syntax.
+function renderInline(raw: string): string {
+  const parts: string[] = [];
+  let lastIndex = 0;
+  const pattern = /`([^`]+)`|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+  for (let match = pattern.exec(raw); match; match = pattern.exec(raw)) {
+    parts.push(renderEmphasis(raw.slice(lastIndex, match.index)));
+    const [, code, label, url] = match;
+    parts.push(
+      code !== undefined
+        ? `<code>${escapeHtml(code)}</code>`
+        : `<a href="${escapeHtml(url)}">${renderEmphasis(label)}</a>`,
+    );
+    lastIndex = pattern.lastIndex;
+  }
+  parts.push(renderEmphasis(raw.slice(lastIndex)));
+  return parts.join("");
+}
+
+// A minimal, dependency-free Markdown renderer for README.md specifically —
+// not a general Markdown implementation. It supports exactly what README.md
+// uses: ATX headings, paragraphs, bold, italic, inline code, and links.
+// Anything else (lists, tables, fenced code, images, block quotes) would
+// render as literal paragraph text rather than being interpreted, which is
+// an accepted trade-off for staying on zero runtime dependencies (see
+// PROCESS.md's stack choice) — README.md never needs them.
+function renderMarkdown(markdown: string): string {
+  return markdown
+    .trim()
+    .split(/\n{2,}/)
+    .map((block) => {
+      const heading = block.match(/^(#{1,6})\s+(.+?)\s*#*$/);
+      if (heading) {
+        const level = heading[1].length;
+        return `<h${level}>${renderInline(heading[2])}</h${level}>`;
+      }
+      return `<p>${renderInline(block)}</p>`;
+    })
+    .join("\n");
+}
+
+const readmeHtml = readFileSync(join(here, "html/readme.html"), "utf8").replace(
+  "@README_HTML@",
+  () => renderMarkdown(readFileSync(join(root, "README.md"), "utf8")),
+);
 
 const MAX_MESSAGE_LENGTH = 280;
 const EMPTY_OCEAN_MESSAGE = "The ocean is quiet. No bottles to catch yet.";
