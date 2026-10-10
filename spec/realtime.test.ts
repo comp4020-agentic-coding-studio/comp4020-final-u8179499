@@ -189,6 +189,23 @@ it("an unsuccessful Catch against an empty ocean emits no `caught` event", async
   expect(caught, "an unsuccessful catch must not emit a `caught` event").toHaveLength(0);
 });
 
+// Regression coverage for the body-size cap in src/server.ts: a rejected
+// request must behave as if it never happened, including on the realtime
+// channel, not just in the durable ocean state.
+it("a Throw rejected for an oversized body emits no `thrown` event", async () => {
+  client = await RealtimeClient.connect(baseUrl);
+
+  const res = await fetch(new URL("/api/bottles", baseUrl), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: "a".repeat(10_000) }),
+  });
+  expect(res.status).toBe(413);
+
+  const thrown = await client.waitFor("thrown", 1, 500);
+  expect(thrown, "a rejected oversized request must not broadcast a `thrown` event").toHaveLength(0);
+});
+
 it("concurrent Catch attempts on one bottle produce exactly one successful Catch and exactly one `caught` event", async () => {
   const message = uniqueMessage("rt-concurrent");
   await throwBottle(message);

@@ -45,22 +45,74 @@ function broadcastEvent(type: "thrown" | "caught"): void {
   }
 }
 
+// A thrown message is capped at 280 characters; 2048 bytes of JSON is already
+// generous headroom for that, so anything past it can only be someone trying
+// to make the server buffer an unbounded body. Thrown to short-circuit
+// readJsonBody, never caught except in the handler that maps it to 413.
+class PayloadTooLargeError extends Error {}
+const MAX_BODY_BYTES = 2048;
+
+// Reads the request body with a hard byte cap, counted from the raw chunks
+// (Buffer.length is a byte count, unlike a decoded string's length once
+// multi-byte UTF-8 is involved) so the cap can't be undercounted. Rejects the
+// moment the cap is crossed — from a declared Content-Length over the limit,
+// or from the running total on a chunked body — without reading the rest of
+// the body first. Deliberately never calls req.destroy()/res.destroy(): the
+// request and response share one socket, and destroying it here would take
+// the 413 response down with it before it could be sent.
 function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
-    let raw = "";
-    req.on("data", (chunk) => (raw += chunk));
-    req.on("end", () => {
-      try {
-        resolve(raw === "" ? {} : JSON.parse(raw));
-      } catch (err) {
-        reject(err);
+    const declaredLength = Number(req.headers["content-length"]);
+    if (Number.isFinite(declaredLength) && declaredLength > MAX_BODY_BYTES) {
+      reject(new PayloadTooLargeError());
+      return;
+    }
+
+    const chunks: Buffer[] = [];
+    let total = 0;
+    let settled = false;
+
+    const done = (err: unknown, value?: unknown): void => {
+      if (settled) return;
+      settled = true;
+      req.off("data", onData);
+      req.off("end", onEnd);
+      req.off("error", onError);
+      if (err) reject(err);
+      else resolve(value);
+    };
+
+    const onData = (chunk: Buffer): void => {
+      total += chunk.length;
+      if (total > MAX_BODY_BYTES) {
+        done(new PayloadTooLargeError());
+        return;
       }
-    });
-    req.on("error", reject);
+      chunks.push(chunk);
+    };
+
+    const onEnd = (): void => {
+      const raw = Buffer.concat(chunks).toString("utf8");
+      try {
+        done(null, raw === "" ? {} : JSON.parse(raw));
+      } catch (err) {
+        done(err);
+      }
+    };
+
+    const onError = (err: unknown): void => done(err);
+
+    req.on("data", onData);
+    req.on("end", onEnd);
+    req.on("error", onError);
   });
 }
 
+// Guards every response against a connection that's already gone (e.g. the
+// client disconnected while its oversized body was still being rejected) —
+// writing to a destroyed/ended response would otherwise throw or double-send.
 function send(res: ServerResponse, status: number, contentType: string, body: string): void {
+  if (res.writableEnded || res.destroyed) return;
   res.writeHead(status, { "Content-Type": contentType });
   res.end(body);
 }
@@ -110,8 +162,15 @@ const server = createServer(async (req, res) => {
     let body: unknown;
     try {
       body = await readJsonBody(req);
-    } catch {
-      send(res, 400, "text/plain", "invalid JSON");
+    } catch (err) {
+      if (err instanceof PayloadTooLargeError) {
+        // The body was never fully read, so this connection can't safely be
+        // reused for a pipelined next request — close it after the response.
+        res.setHeader("Connection", "close");
+        send(res, 413, "text/plain", "request body too large");
+      } else {
+        send(res, 400, "text/plain", "invalid JSON");
+      }
       return;
     }
     const message = typeof (body as { message?: unknown })?.message === "string"

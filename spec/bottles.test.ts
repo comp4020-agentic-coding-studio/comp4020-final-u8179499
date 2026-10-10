@@ -1,3 +1,4 @@
+import { request as httpRequest } from "node:http";
 import { beforeEach, expect, inject, it } from "vitest";
 
 // The Crit 8 API contract these tests hold the app to:
@@ -169,6 +170,70 @@ it("the ocean's visualLevel is exact for 0-3 uncaught bottles, then caps at \"ma
     await catchBottle();
     expect((await ocean()).visualLevel).toBe(expected);
   }
+});
+
+// A 280-character message is at most ~1.1KB of UTF-8 JSON, so anything past
+// a couple of KB can only be someone making the server buffer an unbounded
+// body. Regression coverage for the body-size cap in src/server.ts.
+it("rejects an oversized request body with 413, before it can create a bottle", async () => {
+  const res = await throwBottle("a".repeat(10_000));
+  expect(res.status).toBe(413);
+
+  // the rejected request must not have created a bottle
+  expect(await ocean()).toEqual({ empty: true, visualLevel: 0 });
+});
+
+it("rejects an oversized body sent via chunked transfer-encoding, not just a Content-Length check", async () => {
+  const url = new URL("/api/bottles", baseUrl);
+  const status = await new Promise<number>((resolve, reject) => {
+    const req = httpRequest(
+      {
+        hostname: url.hostname,
+        port: url.port,
+        path: url.pathname,
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Transfer-Encoding": "chunked" },
+      },
+      (res) => {
+        res.resume();
+        res.on("end", () => resolve(res.statusCode ?? 0));
+      },
+    );
+    req.on("error", reject);
+    // No Content-Length is ever sent; several small chunks that individually
+    // look harmless sum to well past the cap, so only the running byte count
+    // (not a header check) can catch this.
+    req.write('{"message":"');
+    for (let i = 0; i < 50; i++) req.write("a".repeat(100));
+    req.end('"}');
+  });
+  expect(status).toBe(413);
+
+  expect(await ocean()).toEqual({ empty: true, visualLevel: 0 });
+});
+
+it("rejects malformed JSON with 400, distinct from an oversized body's 413", async () => {
+  const res = await fetch(new URL("/api/bottles", baseUrl), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{not valid json",
+  });
+  expect(res.status).toBe(400);
+
+  expect(await ocean()).toEqual({ empty: true, visualLevel: 0 });
+});
+
+it("stays usable for normal requests immediately after rejecting an oversized one", async () => {
+  const rejected = await throwBottle("a".repeat(10_000));
+  expect(rejected.status).toBe(413);
+
+  const message = uniqueMessage("test-after-oversized");
+  const throwRes = await throwBottle(message);
+  expect(throwRes.status).toBe(201);
+
+  const catchRes = await catchBottle();
+  const body = await catchRes.json();
+  expect(body.bottle?.message).toBe(message);
 });
 
 // Not covered here, and not coverable by this harness: whether a thrown
