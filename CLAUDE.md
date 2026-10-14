@@ -14,13 +14,19 @@ don't let them drift apart.
   second way to browse what's in the ocean. A new interaction must never
   turn this into a feed, a browsing experience, or a social network, and
   must never undermine README.md's definition of good.
-- **Anonymous**: never store or derive anything that links an action to
-  a person — no name, no cookie, no session token, no sender or
-  receiver identity of any kind. The schema is
-  `id, message, created_at, caught_at`; no field may ever encode who
-  did something. The realtime events described below carry no identity,
-  session marker, or presence count either — only that a throw or catch
-  happened.
+- **Anonymous**: visitors are anonymous to each other — no visitor can
+  ever learn who threw or caught anything. No name, no account, no
+  profile, no sender or receiver identity of any kind. Bottle records
+  never say who: the schema is `id, message, created_at, caught_at`; no
+  field may ever encode who did something. The realtime events described
+  below carry no identity, session marker, or presence count either —
+  only that a throw or catch happened. Server observability is a
+  separate, narrower thing (since Crit 10): the pseudonymous browser
+  identity below exists only in an HttpOnly cookie and in operator-only
+  stdout logs, which Fly retains and which may therefore hold a
+  pseudonymous record of actions. Visitors can never read those logs, and
+  the identity never reaches the database, an API body, an SSE frame, or
+  the page.
 - **Surprising**: catch never accepts a filter, search, or preview
   parameter, and never returns more than one bottle. Claiming a bottle
   must be atomic (a single `UPDATE ... WHERE caught_at IS NULL`, never
@@ -83,6 +89,38 @@ don't let them drift apart.
 - Full rationale and trade-offs, including why this is a narrow,
   accepted loosening of the stricter Crit 8/ADR 0001 opacity stance:
   `decisions/0002-ambient-bottle-population-visibility.md`.
+
+## Browser identity, permissions and logs (since Crit 10)
+
+- Every browser gets one signed, random, pseudonymous identity in the
+  `mib_visitor` cookie (`v1.<id>.<mac>`, HMAC-SHA256, HttpOnly,
+  SameSite=Lax, 30 days, Secure on Fly). It is issued automatically to
+  any request that lacks a genuine one; a missing cookie never makes an
+  otherwise valid request fail. An unsigned, tampered, or foreign-key
+  value is never treated as an identity.
+- An identity grants nothing. Every visitor has the same rights: read
+  `/`, `/readme/`, `/api/ocean`, `/api/events`; Throw; Catch (including
+  their own bottle — never add a rule against that). Never add
+  ownership, per-bottle permissions, accounts, profiles, or any route
+  that shows a visitor who anyone is.
+- Throw and Catch are refused (403, nothing changed, nothing broadcast,
+  no identity issued) when a browser marks them cross-site. This is
+  forgery protection, not authentication. Never add a Content-Type
+  requirement that breaks existing clients.
+- Logs are one JSON object per stdout line with only `ts`, `evt`,
+  `actor`, `outcome`, `status`, `reason`, `cause`, `port`, `secret`.
+  `actor` is a keyed-hash label (`b-` + 16 hex), never the cookie. Never
+  log message text or length, bottle ids, cookie values, signatures,
+  secrets, IPs, forwarded headers, User-Agents, request bodies or
+  headers, or raw error objects. Never expose logs over HTTP.
+- The HMAC secret lives beside the database (`identity-secret`, 0600)
+  or in `IDENTITY_SECRET`; never commit it, never silently replace an
+  unreadable one. Tests that need a server's stdout or a restart spawn
+  their own on a temp directory (`spec/support/server-process.ts`),
+  never the shared `APP_URL` app and never production.
+- Full rationale, alternatives and trade-offs:
+  `decisions/0003-crit10-pseudonymous-browser-identity.md`, which
+  partially supersedes the "no session identity" stance in ADR 0001.
 
 ## Historical scope note (Crit 8)
 

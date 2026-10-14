@@ -10,4 +10,8 @@ dist
 .envrc
 mise.local.toml
 *.pem
+# the visitor-cookie signing key the server creates beside its database
+# (decisions/0003); a relative DB_PATH would otherwise put it in the tree,
+# at any depth — unlike .gitignore, a bare name here only matches the root
+**/identity-secret
 .claude

@@ -1,5 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { openDatabase, throwBottle, catchBottle, oceanVisualLevel } from "./db.ts";
@@ -13,6 +14,145 @@ const PORT = Number(process.env.PORT ?? 8080);
 const DB_PATH = process.env.DB_PATH ?? "/data/bottles.db";
 
 const db = openDatabase(DB_PATH);
+
+// Crit 10 (decisions/0003-crit10-pseudonymous-browser-identity.md): one
+// structured line per event on stdout, which is what `flyctl logs` shows.
+// Callers pass only fixed vocabulary — event names, outcomes, reasons,
+// statuses and actor labels — never request content, headers or errors.
+type LogValue = string | number | undefined;
+function log(evt: string, fields: Record<string, LogValue> = {}): void {
+  console.log(JSON.stringify({ ts: new Date().toISOString(), evt, ...fields }));
+}
+
+// The key that signs visitor cookies and derives their log labels. It has to
+// outlive restarts and redeploys or every browser would become a stranger, so
+// by default it's created once beside the database, on the same volume.
+// IDENTITY_SECRET overrides that; an in-memory database gets an in-memory
+// key, so a throwaway run never writes a secret into the working directory.
+// A secret that exists but can't be used stops the server rather than being
+// quietly replaced, which would silently re-identify everyone.
+const SECRET_HEX = /^[0-9a-f]{64}$/i;
+
+function loadIdentitySecret(dbPath: string): { key: Buffer; source: "env" | "file" | "memory" } {
+  const configured = process.env.IDENTITY_SECRET;
+  if (configured !== undefined) {
+    if (!SECRET_HEX.test(configured)) {
+      throw new Error("IDENTITY_SECRET must be exactly 64 hex characters (256 bits)");
+    }
+    return { key: Buffer.from(configured, "hex"), source: "env" };
+  }
+  if (dbPath === ":memory:") return { key: randomBytes(32), source: "memory" };
+
+  const path = join(dirname(dbPath), "identity-secret");
+  const fresh = randomBytes(32).toString("hex");
+  try {
+    // "wx" creates the file only if it doesn't exist yet, so a second server
+    // can never overwrite the first one's key.
+    writeFileSync(path, `${fresh}\n`, { flag: "wx", mode: 0o600 });
+    return { key: Buffer.from(fresh, "hex"), source: "file" };
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+  }
+  const stored = readFileSync(path, "utf8").trim();
+  if (!SECRET_HEX.test(stored)) {
+    throw new Error(`identity secret at ${path} is not 64 hex characters; refusing to replace it`);
+  }
+  return { key: Buffer.from(stored, "hex"), source: "file" };
+}
+
+let identity: ReturnType<typeof loadIdentitySecret>;
+try {
+  identity = loadIdentitySecret(DB_PATH);
+} catch (err) {
+  console.error(`cannot start: ${(err as Error).message}`);
+  process.exit(1);
+}
+
+// On Fly the app is only ever reached as https://<app>.fly.dev (fly.toml sets
+// force_https), and FLY_APP_NAME is set by Fly's runtime, not by anything a
+// request can influence — so it, not X-Forwarded-Proto, decides both the
+// Secure flag and the one origin allowed to write.
+const FLY_APP_NAME = process.env.FLY_APP_NAME;
+const PUBLIC_ORIGIN = FLY_APP_NAME ? `https://${FLY_APP_NAME}.fly.dev` : null;
+
+// A visitor is a 128-bit random id the server signed: `v1.<id>.<mac>`, both
+// base64url. The cookie is HttpOnly, so page script never sees it, and the
+// label in the logs is a separate keyed hash — knowing someone's label gives
+// no way back to their cookie. Visitors carry no rights beyond any other.
+const VISITOR_COOKIE = "mib_visitor";
+const VISITOR_MAX_AGE = 30 * 24 * 60 * 60;
+const VISITOR_SHAPE = /^v1\.([A-Za-z0-9_-]{22})\.([A-Za-z0-9_-]{43})$/;
+
+function visitorMac(id: string): string {
+  return createHmac("sha256", identity.key).update(`mib_visitor/v1/mac:${id}`).digest("base64url");
+}
+
+function actorLabel(id: string): string {
+  return `b-${createHmac("sha256", identity.key).update(`mib_visitor/v1/label:${id}`).digest("hex").slice(0, 16)}`;
+}
+
+// The genuine visitor id this request carries, if any. Every mib_visitor
+// value is checked (a browser can end up sending more than one) and the first
+// that verifies wins; anything else — unsigned, wrong version, wrong length,
+// signed with another key — is "invalid", never a partial identity.
+function readVisitor(req: IncomingMessage): { id: string } | { id: null; cause: "missing" | "invalid" } {
+  let sawCookie = false;
+  for (const part of (req.headers.cookie ?? "").split(";")) {
+    const eq = part.indexOf("=");
+    if (eq === -1 || part.slice(0, eq).trim() !== VISITOR_COOKIE) continue;
+    sawCookie = true;
+    const match = VISITOR_SHAPE.exec(part.slice(eq + 1).trim());
+    if (!match) continue;
+    const [, id, mac] = match;
+    if (timingSafeEqual(Buffer.from(mac), Buffer.from(visitorMac(id)))) return { id };
+  }
+  return { id: null, cause: sawCookie ? "invalid" : "missing" };
+}
+
+// Returns this request's actor label, issuing a new identity first if it
+// didn't bring a genuine one. Must run before any response header is sent.
+function ensureVisitor(req: IncomingMessage, res: ServerResponse): string {
+  const visitor = readVisitor(req);
+  if (visitor.id !== null) return actorLabel(visitor.id);
+
+  const id = randomBytes(16).toString("base64url");
+  const attributes = ["HttpOnly", "SameSite=Lax", "Path=/", `Max-Age=${VISITOR_MAX_AGE}`];
+  if (PUBLIC_ORIGIN) attributes.push("Secure");
+  res.setHeader("Set-Cookie", `${VISITOR_COOKIE}=v1.${id}.${visitorMac(id)}; ${attributes.join("; ")}`);
+  const actor = actorLabel(id);
+  log("identity.issued", { actor, cause: visitor.cause });
+  return actor;
+}
+
+// The label of a genuine visitor, without ever issuing one — for requests the
+// server is refusing.
+function existingActor(req: IncomingMessage): string | undefined {
+  const visitor = readVisitor(req);
+  return visitor.id === null ? undefined : actorLabel(visitor.id);
+}
+
+// Whether a state-changing request could have come from this app's own page.
+// This is protection against another site making a visitor's browser act,
+// not authentication: a non-browser client can claim any headers it likes,
+// and that's fine, because it's only ever one more anonymous visitor. A
+// browser always marks a cross-site request (Sec-Fetch-Site, or an Origin
+// that isn't ours — including the opaque "null"); a request with neither
+// header isn't one a browser made from another site.
+function isSameOriginWrite(req: IncomingMessage): boolean {
+  const site = req.headers["sec-fetch-site"];
+  if (site === "cross-site" || site === "same-site") return false;
+  const origin = req.headers.origin;
+  if (origin === undefined) return true;
+  // Locally there's no fixed public name, and the app serves plain http, so
+  // the host the client connected to is the origin its page would have.
+  let expected: string;
+  try {
+    expected = PUBLIC_ORIGIN ?? new URL(`http://${req.headers.host ?? ""}`).origin;
+    return new URL(origin).origin === expected;
+  } catch {
+    return false;
+  }
+}
 
 const indexHtml = readFileSync(join(here, "html/index.html"), "utf8");
 
@@ -183,22 +323,28 @@ const server = createServer(async (req, res) => {
   const { pathname } = new URL(req.url ?? "/", "http://localhost");
 
   if (req.method === "GET" && pathname === "/") {
+    ensureVisitor(req, res);
     send(res, 200, "text/html", indexHtml);
     return;
   }
 
   if (req.method === "GET" && pathname === "/readme/") {
+    ensureVisitor(req, res);
     send(res, 200, "text/html", readmeHtml);
     return;
   }
 
   if (req.method === "GET" && pathname === "/api/ocean") {
+    ensureVisitor(req, res);
     const visualLevel = oceanVisualLevel(db);
     sendJson(res, 200, { empty: visualLevel === 0, visualLevel });
     return;
   }
 
   if (req.method === "GET" && pathname === "/api/events") {
+    // Before writeHead/flushHeaders: once the stream's headers are out, a
+    // first-time visitor could no longer be given a cookie.
+    const actor = ensureVisitor(req, res);
     res.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
@@ -210,13 +356,33 @@ const server = createServer(async (req, res) => {
     // until a broadcast has something to send it.
     res.flushHeaders();
     sseClients.add(res);
+    log("sse.open", { actor });
     req.on("close", () => {
       sseClients.delete(res);
+      log("sse.close", { actor });
     });
     return;
   }
 
+  // Both writes refuse anything a browser marks as coming from another site,
+  // before reading the body, issuing an identity or touching the ocean.
+  const isWrite = req.method === "POST" && (pathname === "/api/bottles" || pathname === "/api/bottles/catch");
+  if (isWrite && !isSameOriginWrite(req)) {
+    log(pathname === "/api/bottles" ? "throw" : "catch", {
+      actor: existingActor(req),
+      outcome: "rejected",
+      reason: "bad_origin",
+      status: 403,
+    });
+    res.setHeader("Connection", "close");
+    send(res, 403, "text/plain", "cross-origin request refused");
+    return;
+  }
+
   if (req.method === "POST" && pathname === "/api/bottles") {
+    const actor = ensureVisitor(req, res);
+    const rejected = (status: number, reason: string): void =>
+      log("throw", { actor, outcome: "rejected", reason, status });
     let body: unknown;
     try {
       body = await readJsonBody(req);
@@ -226,8 +392,10 @@ const server = createServer(async (req, res) => {
         // reused for a pipelined next request — close it after the response.
         res.setHeader("Connection", "close");
         send(res, 413, "text/plain", "request body too large");
+        rejected(413, "too_large");
       } else {
         send(res, 400, "text/plain", "invalid JSON");
+        rejected(400, "invalid_json");
       }
       return;
     }
@@ -236,21 +404,28 @@ const server = createServer(async (req, res) => {
       : "";
     if (message.length === 0 || message.length > MAX_MESSAGE_LENGTH) {
       send(res, 400, "text/plain", "message must be 1-280 characters after trimming");
+      rejected(400, message.length === 0 ? "invalid_message" : "too_long");
       return;
     }
     throwBottle(db, message);
     broadcastEvent("thrown");
     send(res, 201, "text/plain", "thrown");
+    log("throw", { actor, outcome: "ok", status: 201 });
     return;
   }
 
   if (req.method === "POST" && pathname === "/api/bottles/catch") {
+    const actor = ensureVisitor(req, res);
     const result = catchBottle(db);
     if (result.bottle) {
       broadcastEvent("caught");
       sendJson(res, 200, { bottle: result.bottle });
+      log("catch", { actor, outcome: "ok", status: 200 });
     } else {
+      // "empty" covers both a quiet ocean and losing a race for the last
+      // bottle: the atomic UPDATE can't tell them apart, and neither can this.
       sendJson(res, 200, { bottle: null, message: EMPTY_OCEAN_MESSAGE });
+      log("catch", { actor, outcome: "empty", status: 200 });
     }
     return;
   }
@@ -259,5 +434,5 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`listening on 0.0.0.0:${PORT}, db at ${DB_PATH}`);
+  log("server.start", { port: PORT, secret: identity.source });
 });

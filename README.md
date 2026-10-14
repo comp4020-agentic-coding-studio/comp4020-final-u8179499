@@ -35,13 +35,14 @@ do: throw a bottle, or catch one.
 
 ## Anonymous
 
-The app stores nothing about who you are: no account, no name, no cookie, no
-session identifier. A bottle is just `id, message, created_at, caught_at`,
-with no sender or receiver column. This isn't a privacy setting I turned on;
-the app simply never learns who threw or caught anything. What you
-write is still your choice: a message could name its author or describe
-something identifying, and the app can't stop that — anonymity here is about
-what the system records, not what someone chooses to say.
+Nobody using the app learns who anyone else is: no account, no name, no
+profile. A bottle is just `id, message, created_at, caught_at`, with no
+sender or receiver column, and the ripple others see never says who. Crit 10
+required a deliberate trade-off: the server gives each browser a random,
+signed pseudonym in an HttpOnly cookie, and operator-only logs record which
+pseudonym threw or caught — never the message or which bottle. That
+pseudonym is a browser, not a person. A message can still identify its
+author.
 
 ## Surprising
 

@@ -15,6 +15,9 @@ Desktop.ini
 .envrc
 mise.local.toml
 *.pem
+# the visitor-cookie signing key the server creates beside its database
+# (decisions/0003); a relative DB_PATH would otherwise put it in the tree
+identity-secret
 
 # Claude Code's project directory is machine-local: settings in here can hold
 # your course API key, and this repo goes public when you ship. Your tracked
