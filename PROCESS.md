@@ -1,128 +1,125 @@
 # Process overview
 
-I worked with Claude Code in a propose → review → approve loop across Crit 8
-and Crit 9: the agent researched, proposed, or drafted; I corrected or
-rejected; nothing was written or committed until I'd approved it, and I kept
-the running app open the whole time rather than trusting green tests alone.
-`CLAUDE.md` is the harness that loop produced — four permanent constraints
-derived from README's definition of good, carried forward and extended, not
-replaced, as the project grew.
+I worked with Claude Code in a propose → review → approve loop across Crits
+8–10: the agent researched, proposed, or drafted; I corrected or rejected;
+nothing was written, committed, or deployed until I'd approved it, and I
+kept the running app open rather than trusting green tests alone.
+`CLAUDE.md` is the harness that loop produced — four constraints derived
+from README's definition of good, extended rather than replaced as the
+project grew.
 
 ## Defining "good", and rejecting the first generic build
 
-I fixed the core interaction — **write → throw → catch → read** — and the
-Crit 8 scope before any code existed: one shared ocean, anonymous senders, a
-bottle caught only once, an atomic catch, no seeded bottles. I had the agent
-survey the brief's "notes on good," then chose Robin Sloan's home-cooked-app
-essay and PostSecret as references, PostSecret specifically as a contrast —
-it has a curator, this app doesn't. I rejected two of the agent's own
-definitions: "Surprising" isn't "you can't catch again," it's a blind,
-unmediated draw every time; "Human" means plain text and no AI-assisted
-composition, not just a character limit
+I fixed the core interaction — **write → throw → catch → read** — before
+any code existed, chose Robin Sloan's home-cooked-app essay and PostSecret
+(as a contrast: it has a curator, this app doesn't), and rejected two of the
+agent's definitions: "Surprising" is a blind, unmediated draw, not "you
+can't catch again"; "Human" means plain text and no AI-assisted composition,
+not just a character limit
 ([`7c96d67`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/7c96d67)).
-`CLAUDE.md` turned that into constraints I rejected a draft of first, since
-it tried to freeze the database schema permanently rather than separating
-permanent principles from Crit-8-specific scope
+I rejected the first `CLAUDE.md` because it froze the schema permanently
+instead of separating principles from Crit 8 scope
 ([`98e3af1`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/98e3af1)).
 The stack — `node:http`, `node:sqlite`, plain HTML/CSS/JS on Node 24, zero
-runtime dependencies — was chosen because two actions and an existence check
-don't need a framework, and a single SQLite file is durable storage that
-fits Fly's one mounted volume without standing up a second service.
+runtime dependencies — fits two actions and one SQLite file on Fly's single
+volume without a framework or a second service. The cost is that I write
+what a framework would give me: a body-size cap, a tiny Markdown renderer
+for `/readme/`, and in Crit 10 cookie parsing and signing. Each stayed small
+enough to read in one sitting, which matters more to me than saving lines.
 
-Six behavioural specs were committed failing before any implementation
+The workflow trade-off is speed. Read-only audits before any edit, specs
+before implementation, and an explicit approval before each commit and
+deploy made every week slower than letting the agent run. They paid off in
+specific places: the Crit 9 audit showed `{ empty }` was the wrong thing to
+push live, and in Crit 10 a review before committing caught a README that
+contradicted the code.
+
+Specs went in failing first
 ([`3c9157b`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/3c9157b)).
-The build that made them pass still read as a generic form when I actually
-looked at it, so I redirected the visuals three times — rejecting an
-abstract night-horizon pass before landing on a daytime, then moonlit,
-ocean — and the harness started earning its keep here: browser inspection
-caught bugs the suite couldn't, most notably a throw animation that never
-ran because `offsetWidth`/`offsetHeight` are `undefined` on an SVG element,
-silently producing `translate(NaNpx, …)`. A cropped screenshot exposed it; a
-`getBoundingClientRect()` helper fixed it
+The build that passed them still read as a generic form, so I redirected the
+visuals — a night horizon, then a daytime ocean, later a moonlit one.
+Browser inspection caught what the suite couldn't: a throw animation
+silently producing `translate(NaNpx, …)` because SVG elements have no
+`offsetWidth`
 ([`659e3d9`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/659e3d9)).
-A later requirements audit caught a further gap the same way: bottles
-persisted, but a returning visitor saw an identical page, since nothing yet
-reported that the ocean held anything. Fixed by adding `GET /api/ocean →
-{ empty }` and gating ambient bottles on it
-([`0129c38`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/0129c38)).
-I verified the brief's persistence requirement directly on the deployed app,
-not just in this fix: a uniquely identifiable bottle thrown, the app
-redeployed onto the same Fly `/data` volume, and Catch still returning that
-exact message afterward.
+A requirements audit then found that a returning visitor saw an identical
+page even though bottles persisted, so `GET /api/ocean → { empty }` was added
+([`0129c38`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/0129c38)),
+and I checked persistence on the deployed app across a redeploy
+([`d5fcbbc`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/d5fcbbc)).
 
-## Choosing anonymous activity over presence, then fixing what hid it
+## Anonymous activity over presence
 
-For Crit 9 I had the agent audit the running app against the brief before
-picking a transport. The audit mattered: our only shared state, `{ empty }`,
-moves on exactly two transitions, so pushing it live would satisfy
-"real-time" in a transport sense while most individual throws and catches
-stayed invisible. I weighed three options against Small/Anonymous/
-Surprising/Human and rejected two of them — presence counts (a new kind of
-visibility README never asked for) and a bucketed fullness state (still a
-count in spirit, and provably doesn't even guarantee every mutation becomes
-visible) — before choosing anonymous, content-free `thrown`/`caught` events,
-reaching every session including the sender's
+For Crit 9 an audit of the running app showed `{ empty }` only changes on
+the first and last bottle, so pushing it live would be "real-time" while
+showing almost nothing. I rejected presence counts and bucketed fullness
+against Small/Anonymous/Surprising and chose content-free `thrown`/`caught`
+events to every session
 ([`4a35f52`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/4a35f52);
-full reasoning in
-[`decisions/0001-crit9-realtime-multiuser-behaviour.md`](decisions/0001-crit9-realtime-multiuser-behaviour.md)).
-
-Five failing specs went in against a `GET /api/events` endpoint that didn't
-exist yet, alongside a sixth guard test that already passed — locking
-`GET /api/ocean`'s existing shape so any future widening would be caught
-automatically
+[ADR 0001](decisions/0001-crit9-realtime-multiuser-behaviour.md)).
+Failing specs came first, and running them exposed parallel spec files
+racing on one server: I confirmed the cause with `--no-file-parallelism`,
+then fixed the harness with `fileParallelism: false` rather than the tests
+it was breaking
 ([`6ecee15`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/6ecee15)).
-Running the full suite surfaced a second bug first: Vitest running spec
-files in parallel against one shared server made three unrelated Crit 8
-tests fail intermittently. I confirmed the cause with
-`--no-file-parallelism` before fixing the harness itself
-(`fileParallelism: false`) rather than touching the tests it was breaking.
-The server then still failed several of the new specs with a timeout
-instead of a clean response — a standalone probe traced it to
-`res.writeHead()` never flushing headers, so a client connecting before any
-broadcast waited forever; `res.flushHeaders()` fixed it
+The server then had an SSE stream that never flushed its headers, so a
+client connecting before any broadcast waited forever; `res.flushHeaders()`
+fixed it
 ([`8bccc14`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/8bccc14)).
-I verified this against the real deployed app, not just localhost: two
-independent SSE clients plus a two-tab browser pass confirmed sub-second
-delivery, no leaked content in any frame, and no event on a losing
-concurrent catch
-([`8000c9a`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/8000c9a)).
-
-## The moonlit-ocean redesign and the capped-population amendment
-
-Later, I went back to the deployed app purely as a *made thing* and didn't
-like two things: the ocean read as generic, and the decorative bottles were
-an all-or-nothing switch — zero, or exactly three, however many messages
-actually existed. The first was a visual-redesign request; the second
-became visible *during* that redesign, which is what made me treat it as a
-separate product defect rather than folding it into the visual pass. I
-authorized the smallest backend change that would fix it — a capped
-`visualLevel` field, exact for 0-3, bucketed above that — and asked for a
-new ADR rather than a rewrite of the Crit 9 record. Along the way I rejected
-a first tint implementation after a zoomed screenshot showed a rotated
-rectangular artifact, and caught a Chromium-specific rendering bug (a
-`filter`+animated-`clip-path` combination producing a stray yellow
-rectangle) by sampling actual animation frames, not CSS. I required a full
-local acceptance pass before I'd allow a commit at all — real browser
-sessions, two-client realtime checks, a server restart against the same
-database file, and keyboard-only navigation and reduced-motion behaviour
-checked by hand, not assumed from the CSS
+Then I verified the live reactions
+([`8000c9a`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/8000c9a))
+on the deployed app with two clients
+([`051642e`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/051642e)).
+During that verification a check of mine left a stray bottle in the real
+ocean, which I had to catch back out; that is why the specs now refuse any
+non-loopback host, alongside a request-body cap
+([`d200782`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/d200782)).
+A later redesign made the decorative bottles track a capped `visualLevel`
 ([`ef5b270`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/ef5b270);
-full decision in
-[`decisions/0002-ambient-bottle-population-visibility.md`](decisions/0002-ambient-bottle-population-visibility.md)).
-That commit was then pushed and verified against the real deployed app:
-CI green, the new `/api/ocean` shape live, and a read-only production
-smoke test that deliberately never threw or caught a bottle, to avoid
-touching a real visitor's message.
-
-Two more documentation passes followed. I later made a further, separate
-product decision: the exact on-screen bottle count no longer had to hold on
-every screen size — only the underlying `visualLevel` data did — and
-relaxed it to a responsive, artistic choice
-([`502683d`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/502683d)).
-Reviewing that write-up, I then caught it overcorrecting: it read as though
-an exact on-screen count had never been the original requirement, when it
-had genuinely been decided and built that way first. I fixed the ADR's
-account rather than let a tidier story replace the real one
+[ADR 0002](decisions/0002-ambient-bottle-population-visibility.md)); when a
+follow-up write-up overstated that decision, I corrected the ADR's history
+rather than keep the tidier story
 ([`78e0af3`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/78e0af3)).
 
-This account will be rewritten again, not appended to, after Crit 10.
+## Telling people apart without undoing Anonymous
+
+Crit 10 needs the server to tell two browsers apart, check permissions, and
+log who did what. My README and `CLAUDE.md` forbade exactly that — "no
+cookie, no session identifier." I had the agent audit the code read-only
+and name the conflict before proposing anything, then compared three
+options: a client-side token (forgeable, and `EventSource` can't send
+headers), per-connection identity (lost on every reload and Fly auto-stop),
+and a server-issued HttpOnly cookie. I chose the cookie, then pushed the
+design further: HMAC-signed rather than a bare random id, so only
+server-issued identities are ever logged, with the secret persisted beside
+the database on Fly's volume. Every visitor keeps identical rights — I
+ruled out ownership, and a rule against catching your own bottle. The
+database still has no sender or receiver column, SSE frames still carry
+nothing, and logs hold a keyed pseudonym, never the message or which bottle
+([ADR 0003](decisions/0003-crit10-pseudonymous-browser-identity.md)). That
+is a real loss of anonymity, so README now says so instead of keeping a
+claim the code no longer meets.
+
+Tests came first, locally rather than as their own commit: 55 new specs
+that spawn their own server on a temp directory, so they can read its
+stdout and restart it. Against the unchanged app 48 failed for the expected
+reasons; the 7 that passed were guards that should already hold. Two review
+passes then caught what I'd missed: README and `CLAUDE.md` still
+contradicted the logs, a relative `DB_PATH` could drop the secret inside
+the repo, and `.dockerignore`'s bare `identity-secret` only matched the
+root. One finding didn't hold — a supposed race in the SSE test helper was
+already handled — so I kept the code and added a regression test instead.
+A browser run with two isolated Chrome contexts confirmed what Node clients
+couldn't: Chrome's real `Origin`/`Sec-Fetch-Site` headers pass the origin
+check, `EventSource` sends the cookie, and labels survive a local restart.
+All of this landed as one commit
+([`a6a4c30`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/a6a4c30)).
+
+I approved the push only after a pre-commit review. CI ran 82/82 specs and
+deployed; read-only checks on Fly confirmed a `Secure` cookie, a stable
+identity across requests, and a 0600 secret on `/data`, without throwing or
+catching a real bottle. Not yet done: a Throw/Catch on production, the
+crit demonstration itself, and confirming labels survive a production
+auto-stop.
+
+This account will be rewritten again, not appended to, before submission.
