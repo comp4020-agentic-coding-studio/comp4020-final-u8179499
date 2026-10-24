@@ -11,9 +11,13 @@ project grew.
 ## Defining "good", and rejecting the first generic build
 
 I fixed the core interaction — **write → throw → catch → read** — before
-any code existed, chose Robin Sloan's home-cooked-app essay and PostSecret
-(as a contrast: it has a curator, this app doesn't), and rejected two of the
-agent's definitions: "Surprising" is a blind, unmediated draw, not "you
+any code existed. From Robin Sloan's home-cooked-app essay I took the
+refusal of scale: no growth to chase, so no feed or profile. But Sloan
+cooks for people he knows, and this app is for strangers, so its warmth
+has to come from one honest message rather than a relationship. PostSecret
+is the alternative I argued against: a curator decides what anyone sees,
+where here a blind draw does. I also rejected two of the agent's
+definitions: "Surprising" is a blind, unmediated draw, not "you
 can't catch again"; "Human" means plain text and no AI-assisted composition,
 not just a character limit
 ([`7c96d67`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/7c96d67)).
@@ -61,10 +65,6 @@ racing on one server: I confirmed the cause with `--no-file-parallelism`,
 then fixed the harness with `fileParallelism: false` rather than the tests
 it was breaking
 ([`6ecee15`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/6ecee15)).
-The server then had an SSE stream that never flushed its headers, so a
-client connecting before any broadcast waited forever; `res.flushHeaders()`
-fixed it
-([`8bccc14`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/8bccc14)).
 Then I verified the live reactions
 ([`8000c9a`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/8000c9a))
 on the deployed app with two clients
@@ -99,10 +99,8 @@ nothing, and logs hold a keyed pseudonym, never the message or which bottle
 is a real loss of anonymity, so README now says so instead of keeping a
 claim the code no longer meets.
 
-Tests came first, locally rather than as their own commit: 55 new specs
-that spawn their own server on a temp directory, so they can read its
-stdout and restart it. Against the unchanged app 48 failed for the expected
-reasons; the 7 that passed were guards that should already hold. Two review
+Tests came first: 55 new specs on their own restartable servers, 48 of
+them failing against the unchanged app for the expected reasons. Two review
 passes then caught what I'd missed: README and `CLAUDE.md` still
 contradicted the logs, a relative `DB_PATH` could drop the secret inside
 the repo, and `.dockerignore`'s bare `identity-secret` only matched the

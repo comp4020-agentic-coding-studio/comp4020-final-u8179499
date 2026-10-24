@@ -15,9 +15,9 @@ not a feed you could get stuck in.
 
 Two things shaped that. Robin Sloan's
 [*An App Can Be a Home-Cooked Meal*](https://www.robinsloan.com/notes/home-cooked-app/) —
-his contrast between an app built for people you know and one built to scale
-is the whole design brief here; a home-cooked app doesn't need a growth
-strategy, so it doesn't need the things that come with one. And
+I take its refusal of scale: a home-cooked app needs no growth strategy, so
+none of the things that come with one. Sloan cooks for people he knows;
+this app is for strangers. And
 [PostSecret](https://en.wikipedia.org/wiki/PostSecret), the closest real
 precedent for "a stranger sends something anonymous and another person just
 encounters it" — except PostSecret has a curator: Frank Warren reads
