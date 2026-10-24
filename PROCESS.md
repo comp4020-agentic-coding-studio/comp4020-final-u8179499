@@ -4,9 +4,7 @@ I worked with Claude Code in a propose → review → approve loop across Crits
 8–10: the agent researched, proposed, or drafted; I corrected or rejected;
 nothing was written, committed, or deployed until I'd approved it, and I
 kept the running app open rather than trusting green tests alone.
-`CLAUDE.md` is the harness that loop produced — four constraints derived
-from README's definition of good, extended rather than replaced as the
-project grew.
+`CLAUDE.md` is the harness that loop produced.
 
 ## Defining "good", and rejecting the first generic build
 
@@ -16,9 +14,11 @@ needn't be big or popular, only meaningful to the people who use it:
 technology should serve people, not chase growth or attention. So no feed
 or profile. But Sloan cooks for people he knows, and this app is for
 strangers, so its warmth has to come from one honest message rather than
-a relationship. PostSecret
-is the alternative I argued against: a curator decides what anyone sees,
-where here a blind draw does. I rejected two of the agent's
+a relationship. PostSecret is the alternative I argued against: a curator
+decides what anyone sees, where here a blind draw does. Ben Hoyt's *The
+small web is beautiful* backed the cuts: more features rarely make a site
+better, so good design means doing the right things well, not doing more,
+and its care for privacy fits Anonymous. I rejected two of the agent's
 definitions: "Surprising" is a blind, unmediated draw, not "you
 can't catch again"; "Human" means plain text and no AI-assisted composition,
 not just a character limit
@@ -35,10 +35,8 @@ enough to read in one sitting, which matters more to me than saving lines.
 
 The workflow trade-off is speed. Read-only audits before any edit, specs
 before implementation, and an explicit approval before each commit and
-deploy made every week slower than letting the agent run. They paid off in
-specific places: the Crit 9 audit showed `{ empty }` was the wrong thing to
-push live, and in Crit 10 a review before committing caught a README that
-contradicted the code.
+deploy made every week slower than letting the agent run; the audits and
+reviews below are where that paid off.
 
 Specs went in failing first
 ([`3c9157b`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/3c9157b)).

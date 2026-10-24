@@ -30,9 +30,10 @@ from.
 ## Small
 
 No accounts, no login, no follower or catch counts, no list of bottles to
-scroll through — not even for the person who threw one. A feed or profile
-page would be the easy addition, and the wrong one: it turns a private
-exchange into something to maintain. There are exactly two things you can
+scroll through — not even for the person who threw one. Ben Hoyt's
+[*The small web is beautiful*](https://benhoyt.com/writings/the-small-web-is-beautiful/)
+argues more features rarely make a site better; a feed or profile would
+turn a private exchange into something to maintain. There are exactly two things you can
 do: throw a bottle, or catch one. Tested: no route lists bottles, visitors
 or logs (`spec/permissions.test.ts`).
 
