@@ -1,8 +1,10 @@
 # Your harness
 
-These rules come directly from README.md's definition of good
-(commit 7c96d67). If README.md changes, these rules change with it —
-don't let them drift apart.
+The four constraints and Persists come directly from README.md's
+definition of good (commit 7c96d67). "Every page" comes from the course
+brief instead: its accessibility floor, and README published at
+`/readme/` for a visitor to read first. If README.md changes, these rules
+change with it — don't let them drift apart.
 
 ## The four constraints — never violate these
 

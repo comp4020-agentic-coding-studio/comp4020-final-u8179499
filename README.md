@@ -2,9 +2,9 @@
 
 Write a message, throw it into the ocean, and it's gone from you. Someone else
 catches a random bottle and reads it. That's the whole app: **write → throw →
-catch → read**. No feed, no accounts, no way to pick which bottle you get.
-A bottle stays in the ocean, across restarts and redeploys, until someone
-catches it; then it's gone for good (`spec/persistence.test.ts`).
+catch → read**. A bottle stays in the ocean, across restarts and
+redeploys, until someone catches it; then it's gone for good
+(`spec/persistence.test.ts`).
 
 ## What "good" means here
 
@@ -40,8 +40,8 @@ or logs (`spec/permissions.test.ts`).
 
 Nobody using the app learns who anyone else is: no account, no name, no
 profile. A bottle is just `id, message, created_at, caught_at`, with no
-sender or receiver column, and the ripple others see never says who. Crit 10
-forced a trade-off: the server gives each browser a random,
+sender or receiver column. Crit 10 forced a trade-off: the server gives
+each browser a random,
 signed pseudonym in an HttpOnly cookie, and operator-only logs record which
 pseudonym threw or caught — never the message or which bottle. That
 pseudonym is a browser, not a person. Tested: pages and ripples never expose
@@ -62,7 +62,8 @@ bottles standing in for how many uncaught messages exist. The count behind
 them is exact and tested up to three; how many are drawn varies with screen
 size. Throwing or catching also sends everyone with the page open
 a silent ripple across the water — a sign something
-happened, never who or what.
+happened, never who or what. That's why it's better shared: alone you see
+only your own ripples; with others here, theirs reach you too.
 
 ## Human
 
