@@ -39,6 +39,13 @@ it("/readme/ renders bold and inline code as real elements, not literal Markdown
   expect(html).not.toMatch(/`/);
 });
 
+it("/ links to /readme/, so a visitor can read the argument before using the app", async () => {
+  const res = await fetch(new URL("/", baseUrl));
+  const html = await res.text();
+
+  expect(html).toMatch(/<a[^>]+href="\/readme\/"[^>]*>[^<]*About/);
+});
+
 it("/readme/ has a Back to Ocean link that points at /", async () => {
   const res = await fetch(new URL("/readme/", baseUrl));
   const html = await res.text();

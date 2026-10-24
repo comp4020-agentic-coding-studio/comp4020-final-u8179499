@@ -715,6 +715,28 @@
         opacity: 0.85;
       }
 
+      /* The one way in to README.md's argument; not a third action. */
+      .readme-link {
+        display: inline-block;
+        margin-top: 0.6rem;
+        color: var(--ink-dim);
+        font-size: 0.85rem;
+        letter-spacing: 0.08em;
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+      }
+
+      .readme-link:hover {
+        color: var(--ink);
+        border-bottom-color: currentColor;
+      }
+
+      .readme-link:focus-visible {
+        outline: 2px solid currentColor;
+        outline-offset: 4px;
+        border-radius: 2px;
+      }
+
       .spacer {
         flex: 1 1 auto;
         min-height: 1.5rem;
@@ -735,7 +757,8 @@
         width: 100%;
         height: 3.6rem;
         resize: none;
-        background: transparent;
+        /* a faint backdrop keeps the placeholder legible over the moving sea */
+        background: rgba(5, 11, 22, 0.25);
         color: var(--ink);
         border: none;
         border-bottom: 1px solid rgba(232, 227, 248, 0.22);
@@ -773,7 +796,7 @@
       }
 
       textarea::placeholder {
-        color: rgba(241, 236, 242, 0.38);
+        color: rgba(241, 236, 242, 0.8);
         font-style: italic;
       }
 
@@ -793,8 +816,7 @@
         font-size: 0.68rem;
         letter-spacing: 0.06em;
         font-variant-numeric: tabular-nums;
-        color: var(--control-dim);
-        opacity: 0.8;
+        color: var(--ink-dim);
       }
 
       /* two words of light, not two buttons */
@@ -1264,6 +1286,7 @@
       <header>
         <h1>Message in a Bottle</h1>
         <p>Write a message and throw it, or catch a random one someone else threw.</p>
+        <a class="readme-link" href="/readme/">About</a>
       </header>
 
       <div class="spacer" aria-hidden="true"></div>

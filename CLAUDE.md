@@ -45,6 +45,15 @@ don't let them drift apart.
   must stay caught. The database lives on the `/data` volume; never move
   it to memory or a cache. Checked by `spec/persistence.test.ts`.
 
+## Every page
+
+- `/` and `/readme/` pass axe's WCAG 2.1 A/AA rules on the HTML the server
+  sends (`spec/accessibility.test.ts`). Never silence a rule to make it
+  pass; fix the markup. Colour contrast and target size can't be checked
+  there, so check them in a real browser when colours or controls change.
+- `/` links to `/readme/`, so a visitor can read the argument before using
+  the app. That link is information, not a third action.
+
 ## Current realtime contract (since Crit 9)
 
 - `GET /api/events` is a Server-Sent Events stream. Every *successful*
