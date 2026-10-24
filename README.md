@@ -69,5 +69,5 @@ only your own ripples; with others here, theirs reach you too.
 
 Messages are plain text, capped at 280 characters — no formatting, no
 attachments, no AI-assisted writing. What shows up is whatever someone
-actually chose to send. Only the cap is tested (`spec/bottles.test.ts`);
-no such features exist.
+actually chose to send. The cap and plain text are tested
+(`spec/bottles.test.ts`); the rest, by absence.

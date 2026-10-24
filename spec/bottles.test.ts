@@ -67,6 +67,17 @@ it("rejects empty or over-280-character messages", async () => {
   expect(tooLong.status).toBe(400);
 });
 
+it("keeps a message plain text: markup comes back verbatim and the page never parses it as HTML", async () => {
+  const message = `${uniqueMessage("plain")} <b>bold</b> **not markdown** <img src=x>`;
+  expect((await throwBottle(message)).status).toBe(201);
+  expect((await (await catchBottle()).json()).bottle.message).toBe(message);
+
+  // the page shows a caught message with textContent; no HTML sink exists
+  // that could turn someone's text into formatting or script
+  const page = await (await fetch(new URL("/", baseUrl))).text();
+  expect(page).not.toMatch(/innerHTML|outerHTML|insertAdjacentHTML|document\.write/);
+});
+
 it("catching returns exactly one bottle, never a list", async () => {
   const message = uniqueMessage("test-3");
   await throwBottle(message);

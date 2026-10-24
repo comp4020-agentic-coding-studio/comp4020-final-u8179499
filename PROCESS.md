@@ -36,8 +36,7 @@ contradicted the code.
 
 Specs went in failing first
 ([`3c9157b`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/3c9157b)).
-The build that passed them still read as a generic form, so I redirected the
-visuals — a night horizon, then a daytime ocean, later a moonlit one.
+The passing build still read as a generic form, so I redirected the visuals.
 Browser inspection caught what the suite couldn't: a throw animation
 silently producing `translate(NaNpx, …)` because SVG elements have no
 `offsetWidth`
@@ -115,9 +114,8 @@ check, `EventSource` sends the cookie, and labels survive a local restart.
 All of this landed as one commit
 ([`a6a4c30`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/a6a4c30)).
 
-After a pre-commit review I approved the push; CI ran 82/82 specs and
-deployed, and read-only checks on Fly confirmed a `Secure` cookie, a stable
-identity and a 0600 secret on `/data`.
+After a pre-commit review, CI ran 82/82 specs and deployed; read-only Fly
+checks confirmed the `Secure` cookie and the 0600 secret.
 
 At the crit, two classmates used the live URL, one in a separate Chrome
 profile and one incognito, throwing and catching while I read only the
@@ -133,3 +131,7 @@ restartable test server made it testable: a `CLAUDE.md` rule plus two
 specs (thrown bottles survive a restart; caught ones stay caught), which
 I confirmed fail against an in-memory database
 ([`84c0a33`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/84c0a33)).
+
+A last audit found no `/readme/` link, no accessibility check and two
+low-contrast texts; all three are now `CLAUDE.md` rules or specs
+([`2645b96`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/2645b96)).
