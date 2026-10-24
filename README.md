@@ -33,39 +33,40 @@ No accounts, no login, no follower or catch counts, no list of bottles to
 scroll through — not even for the person who threw one. A feed or profile
 page would be the easy addition, and the wrong one: it turns a private
 exchange into something to maintain. There are exactly two things you can
-do: throw a bottle, or catch one.
+do: throw a bottle, or catch one. Tested: no route lists bottles, visitors
+or logs (`spec/permissions.test.ts`).
 
 ## Anonymous
 
 Nobody using the app learns who anyone else is: no account, no name, no
 profile. A bottle is just `id, message, created_at, caught_at`, with no
 sender or receiver column, and the ripple others see never says who. Crit 10
-required a deliberate trade-off: the server gives each browser a random,
+forced a trade-off: the server gives each browser a random,
 signed pseudonym in an HttpOnly cookie, and operator-only logs record which
 pseudonym threw or caught — never the message or which bottle. That
-pseudonym is a browser, not a person. A message can still identify its
-author.
+pseudonym is a browser, not a person. Tested: pages and ripples never expose
+a pseudonym; logs never hold messages (`spec/permissions.test.ts`,
+`spec/logging.test.ts`). Judged: a message can still identify its author.
 
 ## Surprising
 
 Catching returns exactly one random uncaught message — no preview, no
-choosing — and this is checked, not asserted: a concurrent-catch test fires
-two simultaneous catches at one bottle and confirms exactly one succeeds.
+choosing — and this is tested, not asserted: of two simultaneous catches at
+one bottle, exactly one succeeds (`spec/bottles.test.ts`).
 It's the one promise I'd call non-negotiable.
 
 What's judged rather than tested is how alive the ocean feels: settled by
 watching it run in a browser and rejecting passes that didn't work, not by a
 green test suite. It's a moonlit sea with partly-submerged decorative
-bottles standing in for how many uncaught messages exist. That data —
-exactly 0, 1, 2, or 3, then a deliberately vague "several" — is exact and
-tested; how many are actually drawn, and where, is a separate artistic
-choice I later let vary with screen size, not a promise every device
-matches. Throwing or catching also sends everyone with the page open,
-including you, a silent ripple across the water — a sign something
+bottles standing in for how many uncaught messages exist. The count behind
+them is exact and tested up to three; how many are drawn varies with screen
+size. Throwing or catching also sends everyone with the page open
+a silent ripple across the water — a sign something
 happened, never who or what.
 
 ## Human
 
 Messages are plain text, capped at 280 characters — no formatting, no
 attachments, no AI-assisted writing. What shows up is whatever someone
-actually chose to send.
+actually chose to send. Only the cap is tested (`spec/bottles.test.ts`);
+no such features exist.
