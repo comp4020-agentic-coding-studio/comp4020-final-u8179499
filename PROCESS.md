@@ -115,11 +115,21 @@ check, `EventSource` sends the cookie, and labels survive a local restart.
 All of this landed as one commit
 ([`a6a4c30`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/a6a4c30)).
 
-I approved the push only after a pre-commit review. CI ran 82/82 specs and
-deployed; read-only checks on Fly confirmed a `Secure` cookie, a stable
-identity across requests, and a 0600 secret on `/data`, without throwing or
-catching a real bottle. Not yet done: a Throw/Catch on production, the
-crit demonstration itself, and confirming labels survive a production
-auto-stop.
+After a pre-commit review I approved the push; CI ran 82/82 specs and
+deployed, and read-only checks on Fly confirmed a `Secure` cookie, a stable
+identity and a 0600 secret on `/data`.
 
-This account will be rewritten again, not appended to, before submission.
+At the crit, two classmates used the live URL, one in a separate Chrome
+profile and one incognito, throwing and catching while I read only the
+logs; nothing went wrong. Without saved logs, I repeated it on
+production in two isolated Chrome profiles: two distinct actors, each
+action correctly attributed, both pages rippling at the same moment. The
+cost: the random catch took a real stranger's bottle, a risk I accepted.
+
+## Making Persists a check, not a promise
+
+Persistence was the only fixed requirement without a spec. Crit 10's
+restartable test server made it testable: a `CLAUDE.md` rule plus two
+specs (thrown bottles survive a restart; caught ones stay caught), which
+I confirmed fail against an in-memory database
+([`84c0a33`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/84c0a33)).

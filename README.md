@@ -3,8 +3,10 @@
 Write a message, throw it into the ocean, and it's gone from you. Someone else
 catches a random bottle and reads it. That's the whole app: **write → throw →
 catch → read**. No feed, no accounts, no way to pick which bottle you get.
+A bottle stays in the ocean, across restarts and redeploys, until someone
+catches it; then it's gone for good (`spec/persistence.test.ts`).
 
-## What "good" means here (first pass)
+## What "good" means here
 
 This is for someone who wants to leave a trace, or stumble on a stranger's,
 without a social app's usual apparatus — no profile, no audience, nothing to
@@ -60,8 +62,7 @@ tested; how many are actually drawn, and where, is a separate artistic
 choice I later let vary with screen size, not a promise every device
 matches. Throwing or catching also sends everyone with the page open,
 including you, a silent ripple across the water — a sign something
-happened, never who or what. None of it is a literal counter: the ocean
-tells you something is going on, never how much or by whom.
+happened, never who or what.
 
 ## Human
 
