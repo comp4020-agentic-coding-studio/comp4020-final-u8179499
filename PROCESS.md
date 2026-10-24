@@ -11,12 +11,14 @@ project grew.
 ## Defining "good", and rejecting the first generic build
 
 I fixed the core interaction — **write → throw → catch → read** — before
-any code existed. From Robin Sloan's home-cooked-app essay I took the
-refusal of scale: no growth to chase, so no feed or profile. But Sloan
-cooks for people he knows, and this app is for strangers, so its warmth
-has to come from one honest message rather than a relationship. PostSecret
+any code existed. Robin Sloan's home-cooked-app essay showed me a good app
+needn't be big or popular, only meaningful to the people who use it:
+technology should serve people, not chase growth or attention. So no feed
+or profile. But Sloan cooks for people he knows, and this app is for
+strangers, so its warmth has to come from one honest message rather than
+a relationship. PostSecret
 is the alternative I argued against: a curator decides what anyone sees,
-where here a blind draw does. I also rejected two of the agent's
+where here a blind draw does. I rejected two of the agent's
 definitions: "Surprising" is a blind, unmediated draw, not "you
 can't catch again"; "Human" means plain text and no AI-assisted composition,
 not just a character limit
@@ -40,7 +42,6 @@ contradicted the code.
 
 Specs went in failing first
 ([`3c9157b`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/3c9157b)).
-The passing build still read as a generic form, so I redirected the visuals.
 Browser inspection caught what the suite couldn't: a throw animation
 silently producing `translate(NaNpx, …)` because SVG elements have no
 `offsetWidth`
