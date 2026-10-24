@@ -39,6 +39,12 @@ don't let them drift apart.
   Never add formatting, attachments, hashtags, or AI-assisted
   composition of the message itself.
 
+## Persists
+
+- A thrown bottle must survive a restart or redeploy, and a caught one
+  must stay caught. The database lives on the `/data` volume; never move
+  it to memory or a cache. Checked by `spec/persistence.test.ts`.
+
 ## Current realtime contract (since Crit 9)
 
 - `GET /api/events` is a Server-Sent Events stream. Every *successful*

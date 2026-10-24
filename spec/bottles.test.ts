@@ -236,8 +236,6 @@ it("stays usable for normal requests immediately after rejecting an oversized on
   expect(body.bottle?.message).toBe(message);
 });
 
-// Not covered here, and not coverable by this harness: whether a thrown
-// bottle is still catchable after the app restarts or redeploys (real disk
-// persistence vs. an in-memory store that happens to survive one test run).
-// spec/global-setup.ts waits for one already-running instance and never
-// restarts it mid-run, so that's a manual check at deploy time, not a test.
+// Not covered here: whether a thrown bottle is still catchable after the app
+// restarts. spec/global-setup.ts never restarts the shared instance, so
+// spec/persistence.test.ts covers it on servers it spawns and restarts itself.
