@@ -65,9 +65,7 @@ racing on one server: I confirmed the cause with `--no-file-parallelism`,
 then fixed the harness with `fileParallelism: false` rather than the tests
 it was breaking
 ([`6ecee15`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/6ecee15)).
-Then I verified the live reactions
-([`8000c9a`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/8000c9a))
-on the deployed app with two clients
+I verified the live reactions on the deployed app with two clients
 ([`051642e`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/051642e)).
 During that verification a check of mine left a stray bottle in the real
 ocean, which I had to catch back out; that is why the specs now refuse any
@@ -106,10 +104,10 @@ contradicted the logs, a relative `DB_PATH` could drop the secret inside
 the repo, and `.dockerignore`'s bare `identity-secret` only matched the
 root. One finding didn't hold — a supposed race in the SSE test helper was
 already handled — so I kept the code and added a regression test instead.
-A browser run with two isolated Chrome contexts confirmed what Node clients
-couldn't: Chrome's real `Origin`/`Sec-Fetch-Site` headers pass the origin
-check, `EventSource` sends the cookie, and labels survive a local restart.
-All of this landed as one commit
+Two isolated Chrome contexts then confirmed what Node clients couldn't:
+real browser headers pass the origin check and `EventSource` sends the
+cookie.
+It landed as one commit
 ([`a6a4c30`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-u8179499/commit/a6a4c30)).
 
 After a pre-commit review, CI ran 82/82 specs and deployed; read-only Fly
@@ -117,7 +115,9 @@ checks confirmed the `Secure` cookie and the 0600 secret.
 
 At the crit, two classmates used the live URL, one in a separate Chrome
 profile and one incognito, throwing and catching while I read only the
-logs; nothing went wrong. Without saved logs, I repeated it on
+logs; nothing went wrong. One asked whether the bottles on the water were
+live; I said only the first few are, by design. Without saved logs, I
+repeated it on
 production in two isolated Chrome profiles: two distinct actors, each
 action correctly attributed, both pages rippling at the same moment. The
 cost: the random catch took a real stranger's bottle, a risk I accepted.
